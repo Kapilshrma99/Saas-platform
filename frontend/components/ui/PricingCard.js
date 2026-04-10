@@ -1,4 +1,53 @@
-export default function PricingCard({ plan }) {
+'use client';
+
+import { useState } from 'react';
+import axios from 'axios';
+
+export default function PricingCard({ plan, yearly = false }) {
+  const [loading, setLoading] = useState(false);
+  
+  const price = yearly 
+    ? (plan.plan === 'basic' ? 79 : plan.plan === 'pro' ? 319 : 559)
+    : (plan.plan === 'basic' ? 99 : plan.plan === 'pro' ? 399 : 699);
+  
+  const handleSubscribe = async () => {
+    setLoading(true);
+    try {
+      const { data } = await axios.post('/api/payments/create-subscription', {
+        plan: plan.plan,
+        yearly
+      });
+
+      if (data.razorpaySubscriptionId) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+          const checkout = new window.Razorpay({
+            key: data.razorpayKeyId,
+            subscription_id: data.razorpaySubscriptionId,
+            name: 'SaaS Platform',
+            description: `${plan.name} Plan - ${yearly ? 'Yearly' : 'Monthly'}`,
+            handler: async (response) => {
+              await axios.post('/api/payments/verify-subscription', {
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_subscription_id: data.razorpaySubscriptionId,
+                razorpay_signature: response.razorpay_signature
+              });
+              alert('Subscription activated successfully!');
+            }
+          });
+          checkout.open();
+        };
+        document.body.appendChild(script);
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      alert('Failed to start subscription. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const isPro = plan.plan === 'pro';
   
   return (
@@ -16,9 +65,10 @@ export default function PricingCard({ plan }) {
       <div className="mb-8">
         <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
         <div className="mt-4 flex items-baseline gap-1">
-          <span className="text-4xl font-extrabold tracking-tight text-slate-900">{plan.price.split('/')[0]}</span>
+          <span className="text-4xl font-extrabold tracking-tight text-slate-900">₹{price}</span>
           <span className="text-sm font-semibold text-slate-500">/mo</span>
         </div>
+        {yearly && <p className="text-xs text-indigo-600 mt-1">Billed yearly</p>}
       </div>
 
       <ul className="mb-10 flex-1 space-y-4 text-sm text-slate-600">
@@ -32,12 +82,15 @@ export default function PricingCard({ plan }) {
         ))}
       </ul>
 
-      <button className={`w-full rounded-2xl py-4 font-bold transition-all active:scale-95 ${
+      <button 
+        onClick={handleSubscribe}
+        disabled={loading}
+        className={`w-full rounded-2xl py-4 font-bold transition-all active:scale-95 ${
         isPro 
           ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700' 
           : 'bg-slate-900 text-white hover:bg-slate-800'
       }`}>
-        Subscribe to {plan.name}
+        {loading ? 'Processing...' : `Subscribe to ${plan.name}`}
       </button>
     </div>
   );

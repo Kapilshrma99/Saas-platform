@@ -91,4 +91,20 @@ const handleWebhook = async (req, res) => {
   }
 };
 
-module.exports = { createPaymentOrder, verifyPayment, createSubscriptionHandler, handleWebhook };
+const verifySubscription = async (req, res) => {
+  try {
+    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+    const crypto = require('crypto');
+    const message = `${razorpay_payment_id}|${razorpay_subscription_id}`;
+    const generatedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(message).digest('hex');
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ message: 'Signature verification failed' });
+    }
+    res.json({ success: true, message: 'Subscription verified successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = { createPaymentOrder, verifyPayment, createSubscriptionHandler, handleWebhook, verifySubscription };
