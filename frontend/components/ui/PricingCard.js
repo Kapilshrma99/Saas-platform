@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 
-export default function PricingCard({ plan, yearly = false }) {
+export default function PricingCard({ plan, yearly = false, tenant = null }) {
   const [loading, setLoading] = useState(false);
   
   const price = yearly 
@@ -11,9 +11,16 @@ export default function PricingCard({ plan, yearly = false }) {
     : (plan.plan === 'basic' ? 99 : plan.plan === 'pro' ? 399 : 699);
   
   const handleSubscribe = async () => {
+    if (!tenant?._id && !tenant?.slug) {
+      alert('Create your website before choosing a subscription.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data } = await axios.post('/api/payments/create-subscription', {
+        tenantId: tenant?._id,
+        tenantSlug: tenant?.slug,
         plan: plan.plan,
         yearly
       });

@@ -12,7 +12,7 @@ export async function POST(request) {
     });
     
     const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('Verification error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

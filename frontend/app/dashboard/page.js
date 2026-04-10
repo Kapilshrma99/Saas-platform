@@ -21,6 +21,9 @@ export default function DashboardPage() {
       body: JSON.stringify(form)
     });
     const data = await response.json();
+    if (response.ok) {
+      localStorage.setItem('currentTenant', JSON.stringify(data));
+    }
     setStatus(data.message || 'Tenant created successfully');
   };
 

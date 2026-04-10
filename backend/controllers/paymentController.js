@@ -1,4 +1,5 @@
 const Tenant = require('../models/Tenant');
+const mongoose = require('mongoose');
 const { createOrder, createSubscription, fetchSubscription, razorpay } = require('../services/razorpayService');
 
 const PLAN_MAP = {
@@ -42,8 +43,18 @@ const verifyPayment = async (req, res) => {
 
 const createSubscriptionHandler = async (req, res) => {
   try {
-    const { tenantId, plan } = req.body;
-    const tenant = await Tenant.findById(tenantId);
+    const { tenantId, tenantSlug, plan } = req.body;
+    if (!tenantId && !tenantSlug) {
+      return res.status(400).json({ message: 'tenantId or tenantSlug is required' });
+    }
+    if (tenantId && !mongoose.Types.ObjectId.isValid(tenantId)) {
+      return res.status(400).json({ message: 'Invalid tenantId' });
+    }
+
+    const tenant = tenantId
+      ? await Tenant.findById(tenantId)
+      : await Tenant.findOne({ slug: tenantSlug });
+
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
     const planConfig = PLAN_MAP[plan];
     if (!planConfig?.razorpayPlanId) {
@@ -53,9 +64,15 @@ const createSubscriptionHandler = async (req, res) => {
     tenant.subscription.plan = plan;
     tenant.subscription.razorpaySubscriptionId = subscription.id;
     tenant.subscription.status = 'active';
-    tenant.subscription.currentPeriodEnd = new Date(subscription.current_end * 1000);
+    if (subscription.current_end) {
+      tenant.subscription.currentPeriodEnd = new Date(subscription.current_end * 1000);
+    }
     await tenant.save();
-    res.json(subscription);
+    res.json({
+      subscription,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+      razorpaySubscriptionId: subscription.id
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });

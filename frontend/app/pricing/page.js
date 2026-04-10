@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PricingCard from '../../components/ui/PricingCard';
 
 const plans = [
@@ -11,6 +11,29 @@ const plans = [
 
 export default function PricingPage() {
   const [yearly, setYearly] = useState(false);
+  const [tenant, setTenant] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tenantFromUrl = {
+      _id: params.get('tenantId'),
+      slug: params.get('tenantSlug')
+    };
+
+    if (tenantFromUrl._id || tenantFromUrl.slug) {
+      setTenant(tenantFromUrl);
+      return;
+    }
+
+    const storedTenant = localStorage.getItem('currentTenant');
+    if (storedTenant) {
+      try {
+        setTenant(JSON.parse(storedTenant));
+      } catch {
+        localStorage.removeItem('currentTenant');
+      }
+    }
+  }, []);
   
   return (
     <div className="min-h-screen bg-slate-50/50 py-24 px-6">
@@ -35,7 +58,7 @@ export default function PricingPage() {
 
         <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-3">
           {plans.map(plan => (
-            <PricingCard key={plan.plan} plan={plan} yearly={yearly} />
+            <PricingCard key={plan.plan} plan={plan} yearly={yearly} tenant={tenant} />
           ))}
         </div>
 
