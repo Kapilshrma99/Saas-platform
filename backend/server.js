@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const tenantMiddleware = require('./middleware/tenantMiddleware');
 const tenantRoutes = require('./routes/tenants');
+const authRoutes = require('./routes/auth');
 const bookingRoutes = require('./routes/bookings');
 const paymentRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
@@ -21,6 +22,7 @@ connectDB();
 connectRedis();
 app.use(tenantMiddleware);
 
+app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/payments', paymentRoutes);

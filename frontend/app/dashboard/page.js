@@ -8,10 +8,15 @@ const initialForm = {
   slug: '',
   subdomain: '',
   businessType: 'freelancer',
+  owner: {
+    email: '',
+    password: ''
+  },
   content: {
     title: '',
     description: '',
     services: [{ title: '', description: '' }],
+    products: [{ title: '', description: '', price: 0 }],
     images: [],
     contactInfo: { phone: '', email: '', address: '' }
   },
@@ -26,44 +31,78 @@ const initialForm = {
 export default function DashboardPage() {
   const [form, setForm] = useState(initialForm);
   const [tenantId, setTenantId] = useState(null);
+  const [authToken, setAuthToken] = useState(null);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    setAuthToken(token);
+
     const stored = typeof window !== 'undefined' ? localStorage.getItem('currentTenant') : null;
     if (stored) {
       const savedTenant = JSON.parse(stored);
       fetchTenant(savedTenant.slug, savedTenant._id);
+    } else if (token) {
+      fetchCurrentTenant(token);
     }
   }, []);
 
+  const fetchCurrentTenant = async token => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        localStorage.removeItem('authToken');
+        setAuthToken(null);
+        return;
+      }
+      const data = await response.json();
+      const tenant = data.tenant;
+      updateFormFromTenant(tenant);
+      setTenantId(tenant._id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const updateFormFromTenant = tenant => {
+    setForm({
+      ...form,
+      name: tenant.name,
+      slug: tenant.slug,
+      subdomain: tenant.subdomain,
+      businessType: tenant.businessType,
+      owner: {
+        email: tenant.owner?.email || '',
+        password: ''
+      },
+      content: {
+        title: tenant.content?.title || '',
+        description: tenant.content?.description || '',
+        services: tenant.content?.services?.length ? tenant.content.services : [{ title: '', description: '' }],
+        products: tenant.content?.products?.length ? tenant.content.products : [{ title: '', description: '', price: 0 }],
+        images: tenant.content?.images || [],
+        contactInfo: tenant.content?.contactInfo || { phone: '', email: '', address: '' }
+      },
+      theme: {
+        primaryColor: tenant.theme?.primaryColor || '#2f80ed',
+        secondaryColor: tenant.theme?.secondaryColor || '#f2c94c',
+        fontFamily: tenant.theme?.fontFamily || 'Inter, sans-serif',
+        layout: tenant.theme?.layout || 'modern'
+      }
+    });
+  };
+
   const fetchTenant = async (slug, id) => {
     try {
-      const response = await fetch(`/api/tenants/${slug}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/tenants/${slug}`);
       if (!response.ok) return;
       const tenant = await response.json();
       setTenantId(tenant._id);
-      setForm({
-        ...form,
-        name: tenant.name,
-        slug: tenant.slug,
-        subdomain: tenant.subdomain,
-        businessType: tenant.businessType,
-        content: {
-          title: tenant.content?.title || '',
-          description: tenant.content?.description || '',
-          services: tenant.content?.services.length ? tenant.content.services : [{ title: '', description: '' }],
-          images: tenant.content?.images || [],
-          contactInfo: tenant.content?.contactInfo || { phone: '', email: '', address: '' }
-        },
-        theme: {
-          primaryColor: tenant.theme?.primaryColor || '#2f80ed',
-          secondaryColor: tenant.theme?.secondaryColor || '#f2c94c',
-          fontFamily: tenant.theme?.fontFamily || 'Inter, sans-serif',
-          layout: tenant.theme?.layout || 'modern'
-        }
-      });
+      updateFormFromTenant(tenant);
     } catch (err) {
       console.error(err);
     }
@@ -74,6 +113,16 @@ export default function DashboardPage() {
       ...prev,
       [section]: {
         ...prev[section],
+        [key]: value
+      }
+    }));
+  };
+
+  const handleOwnerChange = (key, value) => {
+    setForm(prev => ({
+      ...prev,
+      owner: {
+        ...prev.owner,
         [key]: value
       }
     }));
@@ -157,20 +206,34 @@ export default function DashboardPage() {
   const handleSubmit = async event => {
     event.preventDefault();
     setError(null);
+
+    if (tenantId && !authToken) {
+      setError('Please log in to update your website.');
+      setStatus(null);
+      return;
+    }
+
     const method = tenantId ? 'PUT' : 'POST';
-    const url = tenantId ? `/api/tenants/${tenantId}` : '/api/tenants';
+    const url = tenantId
+      ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/tenants/${tenantId}`
+      : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/register`;
+
     const payload = {
       ...form,
       content: {
         ...form.content,
-        services: form.content.services.filter(service => service.title || service.description)
+        services: form.content.services.filter(service => service.title || service.description),
+        products: form.content.products.filter(product => product.title || product.description)
       }
     };
 
     setStatus(tenantId ? 'Updating website...' : 'Creating website...');
     const response = await fetch(url, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(tenantId && authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      },
       body: JSON.stringify(payload)
     });
     const data = await response.json();
@@ -181,12 +244,19 @@ export default function DashboardPage() {
       return;
     }
 
+    if (!tenantId) {
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('currentTenant', JSON.stringify(data.tenant));
+      setAuthToken(data.token);
+      setTenantId(data.tenant._id);
+      setStatus('Website created successfully! Redirecting...');
+      router.push(`/site/${data.tenant.slug}`);
+      return;
+    }
+
     localStorage.setItem('currentTenant', JSON.stringify(data));
     setTenantId(data._id);
-    setStatus(tenantId ? 'Website updated successfully.' : 'Website created successfully! Redirecting...');
-    if (!tenantId) {
-      router.push(`/site/${data.slug}`);
-    }
+    setStatus('Website updated successfully.');
   };
 
   return (
@@ -237,11 +307,52 @@ export default function DashboardPage() {
                 >
                   <option value="doctor">Doctor</option>
                   <option value="restaurant">Restaurant</option>
+                  <option value="shopping">Shopping</option>
                   <option value="freelancer">Freelancer</option>
                   <option value="small-business">Small Business</option>
                 </select>
               </label>
             </div>
+            {!tenantId ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Owner Email</span>
+                  <input
+                    type="email"
+                    value={form.owner.email}
+                    onChange={e => handleOwnerChange('email', e.target.value.toLowerCase())}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    placeholder="owner@business.com"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Owner Password</span>
+                  <input
+                    type="password"
+                    value={form.owner.password}
+                    onChange={e => handleOwnerChange('password', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    placeholder="Enter a secure password"
+                    required
+                  />
+                </label>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-slate-200 p-4 bg-slate-50">
+                <p className="text-sm text-slate-700">Signed in as <span className="font-semibold">{form.owner.email}</span>.</p>
+                <label className="block mt-4">
+                  <span className="text-sm font-medium text-slate-700">New password (optional)</span>
+                  <input
+                    type="password"
+                    value={form.owner.password}
+                    onChange={e => handleOwnerChange('password', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    placeholder="Leave blank to keep current password"
+                  />
+                </label>
+              </div>
+            )}
           </section>
 
           <section className="space-y-4 rounded-3xl border border-slate-200 p-6 bg-slate-50">

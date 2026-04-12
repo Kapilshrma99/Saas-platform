@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import BookingForm from './BookingForm';
 import { applyTheme } from '../services/theme';
 
@@ -21,32 +21,120 @@ export default function WebsiteRenderer({ tenant }) {
     );
   }
 
-  const { content, theme, subscription } = tenant;
-  const services = content?.services || [{ title: 'Service 1', description: 'Describe your first service.' }];
+  const { content, subscription } = tenant;
+  const services = content?.services?.length ? content.services : [{ title: 'Service 1', description: 'Describe your first service.' }];
+  const products = content?.products?.length ? content.products : [{ title: 'Sample Product', description: 'Add products in your dashboard for shopping websites.', price: 0 }];
+
+  const renderHeroSubtitle = () => {
+    switch (tenant.businessType) {
+      case 'doctor':
+        return 'Health & Appointments';
+      case 'restaurant':
+        return 'Reserve Your Table';
+      case 'shopping':
+        return 'Shop Our Best Items';
+      case 'freelancer':
+        return 'Professional Services';
+      default:
+        return 'Business Services';
+    }
+  };
+
+  const renderBusinessSection = () => {
+    switch (tenant.businessType) {
+      case 'doctor':
+        return (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <h2 className="text-2xl font-semibold">Medical Services</h2>
+              <p className="mt-4 text-slate-600">{content?.description || 'Expert care for your patients, with easy appointment booking.'}</p>
+              <div className="mt-6 space-y-4">
+                {services.map((service, index) => (
+                  <div key={index} className="rounded-3xl bg-slate-50 p-5">
+                    <h3 className="text-xl font-semibold">{service.title}</h3>
+                    <p className="mt-2 text-slate-600">{service.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <BookingForm tenant={tenant} />
+          </section>
+        );
+      case 'restaurant':
+        return (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <h2 className="text-2xl font-semibold">Today's Menu</h2>
+              <div className="mt-6 space-y-4">
+                {services.map((item, index) => (
+                  <div key={index} className="rounded-3xl bg-slate-50 p-5">
+                    <h3 className="text-xl font-semibold">{item.title}</h3>
+                    <p className="mt-2 text-slate-600">{item.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <BookingForm tenant={tenant} />
+          </section>
+        );
+      case 'shopping':
+        return (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <h2 className="text-2xl font-semibold">Featured Products</h2>
+              <div className="mt-6 space-y-4">
+                {products.map((product, index) => (
+                  <div key={index} className="rounded-3xl bg-slate-50 p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <h3 className="text-xl font-semibold">{product.title}</h3>
+                      <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium">${product.price || '0.00'}</span>
+                    </div>
+                    <p className="mt-2 text-slate-600">{product.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <h2 className="text-2xl font-semibold">Contact & Support</h2>
+              <p className="mt-4 text-slate-600">{content?.description || 'Need help with an order? Reach out and we will assist you.'}</p>
+              <div className="mt-6 space-y-3 text-slate-700">
+                <p><span className="font-semibold">Phone:</span> {content?.contactInfo?.phone || 'Not set'}</p>
+                <p><span className="font-semibold">Email:</span> {content?.contactInfo?.email || 'Not set'}</p>
+                <p><span className="font-semibold">Address:</span> {content?.contactInfo?.address || 'Not set'}</p>
+              </div>
+            </div>
+          </section>
+        );
+      default:
+        return (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <h2 className="text-2xl font-semibold">What We Offer</h2>
+              <div className="mt-6 space-y-4">
+                {services.map((service, index) => (
+                  <div key={index} className="rounded-3xl bg-slate-50 p-5">
+                    <h3 className="text-xl font-semibold">{service.title}</h3>
+                    <p className="mt-2 text-slate-600">{service.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <BookingForm tenant={tenant} />
+          </section>
+        );
+    }
+  };
 
   return (
     <main className="container space-y-12">
       <section className="rounded-3xl border border-slate-200 p-10 shadow-sm">
         <header className="space-y-4">
-          <p className="uppercase text-sm tracking-[0.3em] text-primary">{tenant.businessType}</p>
+          <p className="uppercase text-sm tracking-[0.3em] text-primary">{renderHeroSubtitle()}</p>
           <h1 className="text-5xl font-bold">{content?.title || tenant.name}</h1>
           <p className="text-lg text-slate-700">{content?.description || 'A beautiful website built for your business.'}</p>
         </header>
       </section>
-      <section className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200 p-8 shadow-sm">
-          <h2 className="text-2xl font-semibold">Our Services</h2>
-          <div className="mt-6 space-y-4">
-            {services.map((service, index) => (
-              <div key={index} className="rounded-3xl bg-slate-50 p-5">
-                <h3 className="text-xl font-semibold">{service.title}</h3>
-                <p className="mt-2 text-slate-600">{service.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <BookingForm tenant={tenant} />
-      </section>
+      {renderBusinessSection()}
       <section className="rounded-3xl border border-slate-200 p-8 shadow-sm">
         <h2 className="text-2xl font-semibold">Gallery</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
