@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
   const fetchCurrentTenant = async token => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+      const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) {
@@ -98,7 +98,7 @@ export default function DashboardPage() {
 
   const fetchTenant = async (slug, id) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/tenants/${slug}`);
+      const response = await fetch(`/api/tenants/${slug}`);
       if (!response.ok) return;
       const tenant = await response.json();
       setTenantId(tenant._id);
@@ -215,8 +215,8 @@ export default function DashboardPage() {
 
     const method = tenantId ? 'PUT' : 'POST';
     const url = tenantId
-      ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/tenants/${tenantId}`
-      : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/register`;
+      ? `/api/tenants/${tenantId}`
+      : '/api/auth/register';
 
     const payload = {
       ...form,

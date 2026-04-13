@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 
+const backendApiOrigin = process.env.INTERNAL_API_URL || 'http://localhost:5000';
+
 export async function POST(request) {
   try {
     const body = await request.json();
     const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = body;
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/verify-subscription`, {
+    const response = await fetch(`${backendApiOrigin}/api/payments/verify-subscription`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ razorpay_payment_id, razorpay_subscription_id, razorpay_signature })

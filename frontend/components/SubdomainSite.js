@@ -13,7 +13,7 @@ export default function SubdomainSite() {
       setLoading(false);
       return;
     }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tenants/${subdomain}`)
+    fetch(`/api/tenants/${subdomain}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => setTenant(data))
       .finally(() => setLoading(false));

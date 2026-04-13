@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 
+const backendApiOrigin = process.env.INTERNAL_API_URL || 'http://localhost:5000';
+
 export async function POST(request) {
   try {
     const body = await request.json();
     const { tenantId, tenantSlug, plan, yearly } = body;
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-subscription`, {
+    const response = await fetch(`${backendApiOrigin}/api/payments/create-subscription`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tenantId, tenantSlug, plan, yearly })

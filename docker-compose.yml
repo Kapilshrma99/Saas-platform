@@ -10,7 +10,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:5000
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - INTERNAL_API_URL=http://backend:5000
       - NEXT_PUBLIC_RAZORPAY_KEY=rzp_test_SYatd0VXxF2Fun
     depends_on:
       - backend
