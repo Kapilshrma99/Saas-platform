@@ -69,8 +69,8 @@ export default function DashboardPage() {
   };
 
   const updateFormFromTenant = tenant => {
-    setForm({
-      ...form,
+    setForm(prev => ({
+      ...prev,
       name: tenant.name,
       slug: tenant.slug,
       subdomain: tenant.subdomain,
@@ -93,7 +93,7 @@ export default function DashboardPage() {
         fontFamily: tenant.theme?.fontFamily || 'Inter, sans-serif',
         layout: tenant.theme?.layout || 'modern'
       }
-    });
+    }));
   };
 
   const fetchTenant = async (slug, id) => {
@@ -220,6 +220,10 @@ export default function DashboardPage() {
 
     const payload = {
       ...form,
+      owner: {
+        ...form.owner,
+        ...(form.owner.password ? {} : { password: undefined })
+      },
       content: {
         ...form.content,
         services: form.content.services.filter(service => service.title || service.description),
@@ -256,6 +260,7 @@ export default function DashboardPage() {
 
     localStorage.setItem('currentTenant', JSON.stringify(data));
     setTenantId(data._id);
+    updateFormFromTenant(data);
     setStatus('Website updated successfully.');
   };
 

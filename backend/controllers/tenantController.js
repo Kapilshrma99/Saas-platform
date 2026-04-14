@@ -51,9 +51,23 @@ const updateTenant = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const update = req.body;
-    if (update.owner?.password) {
-      update.owner.password = await bcrypt.hash(update.owner.password, 10);
+    const existingTenant = req.tenant;
+    const update = { ...req.body };
+
+    update.slug = update.slug?.toLowerCase();
+    update.subdomain = update.subdomain?.toLowerCase();
+
+    if (update.owner) {
+      const nextOwner = {
+        email: update.owner.email?.toLowerCase() || existingTenant.owner.email,
+        password: existingTenant.owner.password
+      };
+
+      if (update.owner.password) {
+        nextOwner.password = await bcrypt.hash(update.owner.password, 10);
+      }
+
+      update.owner = nextOwner;
     }
 
     const tenant = await Tenant.findByIdAndUpdate(tenantId, update, { new: true }).lean();
