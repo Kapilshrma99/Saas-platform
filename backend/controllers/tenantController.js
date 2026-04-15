@@ -34,9 +34,11 @@ const createTenant = async (req, res) => {
 
 const getTenantBySlug = async (req, res) => {
   try {
-    const slug = req.params.slug;
-    console.log('Fetching tenant by slug:', slug);
-    const tenant = await Tenant.findOne({ slug }).lean();
+    const identifier = req.params.slug?.toLowerCase();
+    console.log('Fetching tenant by identifier:', identifier);
+    const tenant = await Tenant.findOne({
+      $or: [{ slug: identifier }, { subdomain: identifier }]
+    }).lean();
     if (!tenant) return res.status(404).json({ message: 'Tenant not found' });
     res.json(sanitizeTenant(tenant));
   } catch (error) {
