@@ -9,6 +9,7 @@ export default function SubdomainSite() {
   useEffect(() => {
     const host = window.location.host.split(':')[0];
     const subdomain = host.split('.')?.[0];
+    console.log('Detected subdomain:', subdomain);
     if (!subdomain || subdomain === 'localhost' || subdomain === 'www') {
       setLoading(false);
       return;
