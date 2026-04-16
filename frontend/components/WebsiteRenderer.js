@@ -1,145 +1,124 @@
 'use client';
+
 import { useEffect, useMemo, useState } from 'react';
 import BookingForm from './BookingForm';
 import { applyTheme } from '../services/theme';
 
 const sitePages = [
-  { id: 'front-page', label: 'Front Page' },
-  { id: 'introduction', label: 'Introduction' },
-  { id: 'about-us', label: 'About Us' },
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'ai-mode', label: 'AI Mode' },
-  { id: 'help', label: 'Help' },
-  { id: 'policy', label: 'Policy' },
-  { id: 'terms', label: 'Terms & Conditions' }
+  { id: 'home', label: 'Home' },
+  { id: 'about', label: 'About' },
+  { id: 'offerings', label: 'Services' },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'contact', label: 'Contact' }
 ];
 
-function formatPlan(plan) {
-  if (!plan) return 'Basic';
-  return plan.charAt(0).toUpperCase() + plan.slice(1);
-}
-
-function getHeroSubtitle(businessType) {
-  switch (businessType) {
-    case 'doctor':
-      return 'Health & Appointments';
-    case 'restaurant':
-      return 'Reserve Your Table';
-    case 'shopping':
-      return 'Shop Our Best Items';
-    case 'freelancer':
-      return 'Professional Services';
-    default:
-      return 'Business Services';
+const businessPresets = {
+  doctor: {
+    badge: 'Care Studio',
+    offeringLabel: 'Treatments',
+    homeTitle: 'Modern care, calm experience, trusted expertise.',
+    homeDescription: 'Create a reassuring digital presence with clear services, specialist highlights, and simple appointment paths.',
+    sectionTone: 'Clean, calm, and confidence-building presentation for patients and families.',
+    surfaceClass:
+      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,255,255,0.72)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_28%)]',
+    accentPanelClass: 'bg-slate-950 text-white',
+    mutedPanelClass: 'bg-cyan-50/80'
+  },
+  restaurant: {
+    badge: 'Dining House',
+    offeringLabel: 'Menu',
+    homeTitle: 'Atmosphere, signature dishes, and easy reservations.',
+    homeDescription: 'Turn the website into a digital dining experience with richer presentation, featured menu items, and direct bookings.',
+    sectionTone: 'Warm, appetizing, and designed to feel like an invitation in.',
+    surfaceClass:
+      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,248,240,0.78)),radial-gradient(circle_at_top_left,rgba(251,146,60,0.20),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.16),transparent_28%)]',
+    accentPanelClass: 'bg-[#1f1307] text-white',
+    mutedPanelClass: 'bg-orange-50/85'
+  },
+  shopping: {
+    badge: 'Storefront',
+    offeringLabel: 'Products',
+    homeTitle: 'A polished storefront designed to help products stand out.',
+    homeDescription: 'Blend visual merchandising, featured items, and a sharper brand voice into one clean customer-facing experience.',
+    sectionTone: 'Confident, product-led, and focused on visual clarity.',
+    surfaceClass:
+      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(244,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.16),transparent_28%)]',
+    accentPanelClass: 'bg-slate-950 text-white',
+    mutedPanelClass: 'bg-indigo-50/80'
+  },
+  freelancer: {
+    badge: 'Independent Studio',
+    offeringLabel: 'Services',
+    homeTitle: 'A personal brand presence with clarity and creative confidence.',
+    homeDescription: 'Showcase your expertise, your process, and your best offers with a website that feels premium and personal.',
+    sectionTone: 'Expressive, sharp, and tailored to solo-brand storytelling.',
+    surfaceClass:
+      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(250,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.14),transparent_28%)]',
+    accentPanelClass: 'bg-slate-950 text-white',
+    mutedPanelClass: 'bg-fuchsia-50/70'
+  },
+  default: {
+    badge: 'Brand Website',
+    offeringLabel: 'Services',
+    homeTitle: 'A stronger digital front door for the business.',
+    homeDescription: 'Present your services, visuals, and contact details with a cleaner and more premium customer experience.',
+    sectionTone: 'Balanced, premium, and easy for visitors to navigate.',
+    surfaceClass:
+      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(247,249,252,0.78)),radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_28%)]',
+    accentPanelClass: 'bg-slate-950 text-white',
+    mutedPanelClass: 'bg-slate-50/85'
   }
-}
+};
 
-function getBusinessSection(tenant, content, services, products) {
-  switch (tenant.businessType) {
-    case 'doctor':
-      return (
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-950">Medical Services</h2>
-            <p className="mt-4 text-slate-600">
-              {content?.description || 'Expert care for your patients, with easy appointment booking.'}
-            </p>
-            <div className="mt-6 space-y-4">
-              {services.map((service, index) => (
-                <div key={index} className="rounded-3xl bg-slate-50 p-5">
-                  <h3 className="text-xl font-semibold text-slate-900">{service.title}</h3>
-                  <p className="mt-2 text-slate-600">{service.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <BookingForm tenant={tenant} />
-        </section>
-      );
-    case 'restaurant':
-      return (
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-950">Today&apos;s Menu</h2>
-            <div className="mt-6 space-y-4">
-              {services.map((item, index) => (
-                <div key={index} className="rounded-3xl bg-slate-50 p-5">
-                  <h3 className="text-xl font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-2 text-slate-600">{item.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <BookingForm tenant={tenant} />
-        </section>
-      );
-    case 'shopping':
-      return (
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-950">Featured Products</h2>
-            <div className="mt-6 space-y-4">
-              {products.map((product, index) => (
-                <div key={index} className="rounded-3xl bg-slate-50 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-xl font-semibold text-slate-900">{product.title}</h3>
-                    <span className="rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
-                      ${product.price || '0.00'}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-slate-600">{product.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-950">Contact & Support</h2>
-            <p className="mt-4 text-slate-600">
-              {content?.description || 'Need help with an order? Reach out and we will assist you.'}
-            </p>
-            <div className="mt-6 space-y-3 text-slate-700">
-              <p><span className="font-semibold">Phone:</span> {content?.contactInfo?.phone || 'Not set'}</p>
-              <p><span className="font-semibold">Email:</span> {content?.contactInfo?.email || 'Not set'}</p>
-              <p><span className="font-semibold">Address:</span> {content?.contactInfo?.address || 'Not set'}</p>
-            </div>
-          </div>
-        </section>
-      );
-    default:
-      return (
-        <section className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-950">What We Offer</h2>
-            <div className="mt-6 space-y-4">
-              {services.map((service, index) => (
-                <div key={index} className="rounded-3xl bg-slate-50 p-5">
-                  <h3 className="text-xl font-semibold text-slate-900">{service.title}</h3>
-                  <p className="mt-2 text-slate-600">{service.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <BookingForm tenant={tenant} />
-        </section>
-      );
-  }
-}
-
-function SectionShell({ eyebrow, title, description, children }) {
+function SectionShell({ kicker, title, description, aside, children }) {
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
-      <div className="max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">{eyebrow}</p>
-        <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{title}</h2>
-        <p className="mt-4 text-base leading-7 text-slate-600">{description}</p>
+    <section className="relative overflow-hidden rounded-[2.25rem] border border-white/60 bg-white/72 p-7 shadow-[0_30px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-10">
+      <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <div>
+          {kicker ? <p className="text-[11px] font-semibold uppercase tracking-[0.42em] text-[var(--primary)]">{kicker}</p> : null}
+          <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950 sm:text-4xl">{title}</h2>
+          {description ? <p className="mt-4 max-w-3xl text-base leading-8 text-slate-600">{description}</p> : null}
+        </div>
+        {aside ? <div>{aside}</div> : null}
       </div>
       <div className="mt-8">{children}</div>
     </section>
   );
 }
 
+function EmptyState({ message }) {
+  return (
+    <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white/70 p-8 text-slate-500">
+      {message}
+    </div>
+  );
+}
+
+function getBusinessTypeLabel(businessType) {
+  return businessType ? businessType.replace('-', ' ') : 'business';
+}
+
+function getInitials(name) {
+  if (!name) return 'BW';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
+}
+
+function getOfferings(content, businessType) {
+  if (businessType === 'shopping') {
+    return content?.products?.filter(product => product.title || product.description) || [];
+  }
+  return content?.services?.filter(service => service.title || service.description) || [];
+}
+
 export default function WebsiteRenderer({ tenant }) {
-  const [activePage, setActivePage] = useState('front-page');
+  const [activePage, setActivePage] = useState('home');
 
   useEffect(() => {
     if (tenant?.theme) {
@@ -148,442 +127,414 @@ export default function WebsiteRenderer({ tenant }) {
   }, [tenant]);
 
   useEffect(() => {
-    setActivePage('front-page');
+    setActivePage('home');
   }, [tenant?._id]);
 
   if (!tenant) {
     return (
-      <main className="container">
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 p-10 text-center shadow-sm">
-          <h1 className="text-3xl font-bold">Tenant not found</h1>
-          <p className="mt-3 text-slate-600">Check your slug or subdomain and try again.</p>
+          <h1 className="text-3xl font-bold">Website not found</h1>
+          <p className="mt-3 text-slate-600">Check your link and try again.</p>
         </div>
       </main>
     );
   }
 
-  const { content, subscription } = tenant;
-  const services = content?.services?.length
-    ? content.services
-    : [{ title: 'Service 1', description: 'Describe your first service.' }];
-  const products = content?.products?.length
-    ? content.products
-    : [{ title: 'Sample Product', description: 'Add products in your dashboard for shopping websites.', price: 0 }];
+  const content = tenant.content || {};
+  const businessTypeLabel = getBusinessTypeLabel(tenant.businessType);
+  const preset = businessPresets[tenant.businessType] || businessPresets.default;
+  const offerings = getOfferings(content, tenant.businessType);
+  const contactInfo = content.contactInfo || {};
+  const images = content.images || [];
+  const offeringLabel = preset.offeringLabel;
+  const heroTitle = content.title || preset.homeTitle;
+  const aboutText =
+    content.description || `${tenant.name || 'This business'} shares its story, offerings, and contact information here.`;
+  const showBookingForm = tenant.businessType !== 'shopping';
+
   const stats = useMemo(
     () => [
-      { label: 'Business Type', value: tenant.businessType || 'General' },
-      { label: 'Services', value: String(services.length) },
-      { label: 'Gallery Items', value: String(content?.images?.length || 0) },
-      { label: 'Plan', value: formatPlan(subscription?.plan) }
+      { label: 'Category', value: businessTypeLabel },
+      { label: offeringLabel, value: String(offerings.length) },
+      { label: 'Gallery', value: String(images.length) }
     ],
-    [content?.images?.length, services.length, subscription?.plan, tenant.businessType]
+    [businessTypeLabel, offeringLabel, offerings.length, images.length]
   );
 
-  const renderFrontPage = () => (
+  const heroNotes = [
+    `${preset.badge}`,
+    `${offerings.length || 0} curated ${offeringLabel.toLowerCase()}`,
+    contactInfo.email || contactInfo.phone || 'Direct contact ready'
+  ];
+
+  const renderHomePage = () => (
     <div className="space-y-8">
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-8 p-8 sm:p-10 lg:grid-cols-[1.4fr_0.9fr] lg:items-center">
-          <header className="space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
-              {getHeroSubtitle(tenant.businessType)}
-            </p>
-            <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-6xl">
-              {content?.title || tenant.name}
-            </h1>
-            <p className="max-w-2xl text-lg leading-8 text-slate-600">
-              {content?.description || 'A beautiful website built for your business.'}
-            </p>
+      <section className={`relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${preset.surfaceClass}`}>
+        <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-3xl" />
+        <div className="absolute bottom-[-3rem] right-[-2rem] h-56 w-56 rounded-full bg-[var(--secondary)]/15 blur-3xl" />
+
+        <div className="relative mx-auto grid max-w-[1500px] gap-10 lg:grid-cols-[minmax(0,1.3fr)_22rem] lg:items-center xl:grid-cols-[minmax(0,1.4fr)_23rem]">
+          <div className="max-w-[820px] space-y-8">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/80 bg-white/85 px-4 py-2 text-sm text-slate-600 shadow-sm">
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_6px_rgba(255,255,255,0.65)]" />
+              {preset.badge} for {tenant.name || 'your business'}
+            </div>
+
+            <div className="space-y-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[var(--primary)]">
+                {businessTypeLabel}
+              </p>
+              <h1 className="max-w-[13ch] text-5xl font-black tracking-[-0.06em] text-slate-950 sm:text-6xl xl:text-7xl">
+                {heroTitle}
+              </h1>
+              <p className="max-w-[62ch] text-lg leading-8 text-slate-600 sm:text-xl">
+                {content.description || preset.homeDescription}
+              </p>
+            </div>
+
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setActivePage('about-us')}
-                className="rounded-full bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:-translate-y-0.5"
+                onClick={() => setActivePage('offerings')}
+                className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-900"
               >
-                Explore Brand
+                Explore {offeringLabel}
               </button>
               <button
                 type="button"
-                onClick={() => setActivePage('help')}
-                className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                onClick={() => setActivePage('contact')}
+                className="rounded-full border border-slate-200 bg-white/88 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
               >
-                Need Help
+                Get In Touch
               </button>
             </div>
-          </header>
-          <div className="grid gap-4">
-            {stats.map(item => (
-              <div key={item.label} className="rounded-3xl bg-slate-50 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">{item.label}</p>
-                <p className="mt-3 text-2xl font-bold text-slate-900">{item.value}</p>
+
+            <div className="grid max-w-[880px] gap-3 md:grid-cols-3">
+              {heroNotes.map(note => (
+                <div key={note} className="rounded-[1.4rem] border border-white/80 bg-white/72 px-4 py-4 text-sm text-slate-600 shadow-sm">
+                  {note}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full max-w-[368px] justify-self-center space-y-4 lg:justify-self-end">
+            <div className={`rounded-[2rem] p-6 shadow-[0_22px_60px_rgba(15,23,42,0.24)] ${preset.accentPanelClass}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.38em] text-white/55">Brand Snapshot</p>
+                  <p className="mt-3 text-2xl font-black tracking-tight">{tenant.name || 'Business Website'}</p>
+                </div>
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-sm font-black uppercase tracking-[0.18em] text-white">
+                  {getInitials(tenant.name)}
+                </div>
               </div>
-            ))}
+              <div className="mt-8 space-y-5">
+                {stats.map(item => (
+                  <div key={item.label} className="flex items-center justify-between gap-4 border-b border-white/10 pb-4 last:border-0 last:pb-0">
+                    <span className="text-sm text-white/65">{item.label}</span>
+                    <span className="text-lg font-semibold capitalize">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className={`rounded-[2rem] border border-white/80 p-6 shadow-sm ${preset.mutedPanelClass}`}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">Creative Direction</p>
+              <p className="mt-4 text-sm leading-7 text-slate-600">{preset.sectionTone}</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {getBusinessSection(tenant, content, services, products)}
+      {offerings.length > 0 ? (
+        <SectionShell
+          kicker="Highlights"
+          title={`Featured ${offeringLabel}`}
+          description="The most important entries are surfaced with a cleaner, more editorial presentation."
+          aside={
+            <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Selection</p>
+              <p className="mt-3 text-sm leading-7 text-slate-600">
+                A focused preview of what visitors should notice first when they land on the site.
+              </p>
+            </div>
+          }
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            {offerings.slice(0, 4).map((item, index) => (
+              <article
+                key={`${item.title || 'item'}-${index}`}
+                className="group rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">0{index + 1}</p>
+                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+                      {item.title || `${offeringLabel} ${index + 1}`}
+                    </h3>
+                  </div>
+                  {'price' in item && item.price !== undefined ? (
+                    <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">
+                      ${item.price || 0}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-4 text-base leading-7 text-slate-600">
+                  {item.description || 'More details coming soon.'}
+                </p>
+                <div className="mt-6 h-px bg-gradient-to-r from-[var(--primary)]/35 to-transparent opacity-0 transition group-hover:opacity-100" />
+              </article>
+            ))}
+          </div>
+        </SectionShell>
+      ) : null}
 
-      <SectionShell
-        eyebrow="Showcase"
-        title="Gallery"
-        description="Visual proof of your brand, work, or customer experience. Upload images in the dashboard to make this section feel truly yours."
-      >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(content?.images || []).map((image, index) => (
-            <div key={index} className="overflow-hidden rounded-3xl bg-slate-100">
-              <img src={image.url} alt={image.alt || `Image ${index + 1}`} className="h-48 w-full object-cover" />
+      {showBookingForm ? (
+        <SectionShell
+          kicker="Connect"
+          title={tenant.businessType === 'doctor' ? 'Book Appointment' : tenant.businessType === 'restaurant' ? 'Reserve or Enquire' : 'Book or Enquire'}
+          description="Turn the website into an active channel for leads, bookings, and direct conversations."
+          aside={
+            <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+              <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Quick Note</p>
+              <p className="mt-3 text-sm leading-7 text-white/72">
+                This section is designed to feel integrated into the brand rather than like a generic form block.
+              </p>
             </div>
-          ))}
-          {content?.images?.length === 0 && (
-            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-8 text-slate-500">
-              Upload images in the dashboard to showcase your business.
-            </div>
-          )}
-        </div>
-      </SectionShell>
+          }
+        >
+          <BookingForm tenant={tenant} />
+        </SectionShell>
+      ) : null}
     </div>
-  );
-
-  const renderIntroductionPage = () => (
-    <SectionShell
-      eyebrow="Introduction"
-      title={`Welcome to ${tenant.name}`}
-      description="This page gives visitors a quick understanding of who you are, what you do, and why your business matters before they explore the rest of the site."
-    >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-lg font-semibold text-slate-900">Who We Are</h3>
-          <p className="mt-3 text-slate-600">
-            {tenant.name} is a modern {tenant.businessType || 'business'} brand focused on clarity, consistency, and customer trust.
-          </p>
-        </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-lg font-semibold text-slate-900">What We Deliver</h3>
-          <p className="mt-3 text-slate-600">
-            We turn your core offer into a clear online experience with service highlights, gallery content, bookings, and branded presentation.
-          </p>
-        </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-lg font-semibold text-slate-900">How To Start</h3>
-          <p className="mt-3 text-slate-600">
-            Browse the front page, review the services, then use the help or booking sections if you want to contact the team quickly.
-          </p>
-        </div>
-      </div>
-    </SectionShell>
   );
 
   const renderAboutPage = () => (
     <SectionShell
-      eyebrow="About Us"
-      title="A stronger story behind the brand"
-      description="Use this area to explain your mission, values, and the promise you make to every customer. For now it is generated from the tenant profile so every site has a usable About page."
-    >
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          <div className="rounded-3xl bg-slate-50 p-6">
-            <h3 className="text-xl font-semibold text-slate-900">Our Story</h3>
-            <p className="mt-3 leading-7 text-slate-600">
-              {tenant.name} was built to create a more polished, trustworthy online presence. This website highlights the business through clean design,
-              focused messaging, and a customer-friendly journey.
-            </p>
-          </div>
-          <div className="rounded-3xl bg-slate-50 p-6">
-            <h3 className="text-xl font-semibold text-slate-900">What Customers Can Expect</h3>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-white p-4">
-                <p className="font-semibold text-slate-900">Clarity</p>
-                <p className="mt-2 text-sm text-slate-600">Easy-to-understand services, products, and next steps.</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="font-semibold text-slate-900">Consistency</p>
-                <p className="mt-2 text-sm text-slate-600">A branded experience across every section of the website.</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="font-semibold text-slate-900">Responsiveness</p>
-                <p className="mt-2 text-sm text-slate-600">Clear contact options for questions, bookings, and support.</p>
-              </div>
-              <div className="rounded-2xl bg-white p-4">
-                <p className="font-semibold text-slate-900">Growth</p>
-                <p className="mt-2 text-sm text-slate-600">A setup that can evolve as the business expands.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/60">Quick Facts</p>
-          <div className="mt-6 space-y-5">
+      kicker="Story"
+      title={`About ${tenant.name || 'Us'}`}
+      description="A more refined, brand-led section for the owner’s message and business identity."
+      aside={
+        <div className={`rounded-[1.75rem] p-6 shadow-xl ${preset.accentPanelClass}`}>
+          <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Identity</p>
+          <div className="mt-5 space-y-5">
             <div>
-              <p className="text-sm text-white/60">Brand Name</p>
-              <p className="text-xl font-semibold">{tenant.name}</p>
+              <p className="text-sm text-white/60">Business Name</p>
+              <p className="mt-2 text-xl font-semibold">{tenant.name || 'Not set'}</p>
             </div>
             <div>
               <p className="text-sm text-white/60">Business Type</p>
-              <p className="text-xl font-semibold capitalize">{tenant.businessType}</p>
-            </div>
-            <div>
-              <p className="text-sm text-white/60">Public Slug</p>
-              <p className="text-xl font-semibold">{tenant.slug}</p>
-            </div>
-            <div>
-              <p className="text-sm text-white/60">Subdomain</p>
-              <p className="text-xl font-semibold">{tenant.subdomain}</p>
+              <p className="mt-2 text-xl font-semibold capitalize">{businessTypeLabel}</p>
             </div>
           </div>
+        </div>
+      }
+    >
+      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/80 p-7 shadow-sm">
+          <p className="text-lg leading-9 text-slate-600">{aboutText}</p>
+        </div>
+        <div className={`rounded-[1.9rem] border border-slate-200/80 p-7 shadow-sm ${preset.mutedPanelClass}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Brand Perspective</p>
+          <p className="mt-4 text-base leading-8 text-slate-600">
+            This page gives the website a stronger narrative center, helping visitors understand the personality behind the business.
+          </p>
         </div>
       </div>
     </SectionShell>
   );
 
-  const renderDashboardPage = () => (
+  const renderOfferingsPage = () => (
     <SectionShell
-      eyebrow="Dashboard"
-      title="Business snapshot"
-      description="This is a lightweight public-facing dashboard view that summarizes content, site readiness, and contact details without exposing private controls."
-    >
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">Website Health</h3>
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center justify-between rounded-2xl bg-white p-4">
-              <span className="text-slate-600">Subscription</span>
-              <span className="font-semibold capitalize text-slate-900">{subscription?.status || 'inactive'}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white p-4">
-              <span className="text-slate-600">Current Plan</span>
-              <span className="font-semibold text-slate-900">{formatPlan(subscription?.plan)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white p-4">
-              <span className="text-slate-600">Services Listed</span>
-              <span className="font-semibold text-slate-900">{services.length}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-2xl bg-white p-4">
-              <span className="text-slate-600">Images Uploaded</span>
-              <span className="font-semibold text-slate-900">{content?.images?.length || 0}</span>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">Contact Overview</h3>
-          <div className="mt-5 space-y-4">
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-sm text-slate-500">Phone</p>
-              <p className="mt-2 font-semibold text-slate-900">{content?.contactInfo?.phone || 'Phone not set'}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-sm text-slate-500">Email</p>
-              <p className="mt-2 font-semibold text-slate-900">{content?.contactInfo?.email || 'Email not set'}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <p className="text-sm text-slate-500">Address</p>
-              <p className="mt-2 font-semibold text-slate-900">{content?.contactInfo?.address || 'Address not set'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </SectionShell>
-  );
-
-  const renderAiModePage = () => (
-    <SectionShell
-      eyebrow="AI Mode"
-      title="AI-assisted growth mode"
-      description="This page presents the site as an intelligent digital assistant for the business, highlighting where automation and AI can improve conversion, support, and content quality."
-    >
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-3xl bg-slate-950 p-6 text-white">
-          <h3 className="text-xl font-semibold">Smart Copy</h3>
-          <p className="mt-3 text-sm leading-6 text-white/70">
-            Generate sharper headlines, cleaner service descriptions, and stronger calls to action for every page.
+      kicker="Offerings"
+      title={offeringLabel}
+      description={`Everything here is presented as part of ${tenant.name || 'this business'}'s own website.`}
+      aside={
+        <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Collection</p>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            A complete overview for visitors who want to go beyond the homepage preview.
           </p>
         </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">AI Recommendations</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Suggest improvements based on missing images, weak descriptions, incomplete contact details, or low content depth.
-          </p>
-        </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">Visitor Assistance</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Offer instant answers about services, pricing, bookings, and next steps through an AI-powered support flow.
-          </p>
-        </div>
-      </div>
-      <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-400">Suggested AI Actions</p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl bg-white p-4 text-slate-600">
-            Write an About Us page based on business type and current services.
-          </div>
-          <div className="rounded-2xl bg-white p-4 text-slate-600">
-            Improve SEO titles and descriptions for the front page and policy sections.
-          </div>
-          <div className="rounded-2xl bg-white p-4 text-slate-600">
-            Create quick customer support responses for the help page.
-          </div>
-          <div className="rounded-2xl bg-white p-4 text-slate-600">
-            Recommend missing media or trust-building content based on site completeness.
-          </div>
-        </div>
-      </div>
-    </SectionShell>
-  );
-
-  const renderHelpPage = () => (
-    <SectionShell
-      eyebrow="Help"
-      title="How can we help?"
-      description="A clear support page reduces friction. Visitors can understand the next step immediately, whether they want information, booking help, or direct contact."
+      }
     >
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">Support Channels</h3>
-          <div className="mt-5 space-y-4 text-slate-600">
-            <div className="rounded-2xl bg-white p-4">
-              <p className="font-semibold text-slate-900">Phone Support</p>
-              <p className="mt-2">{content?.contactInfo?.phone || 'Phone not set'}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <p className="font-semibold text-slate-900">Email Support</p>
-              <p className="mt-2">{content?.contactInfo?.email || 'Email not set'}</p>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <p className="font-semibold text-slate-900">Office Address</p>
-              <p className="mt-2">{content?.contactInfo?.address || 'Address not set'}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-3xl bg-slate-50 p-6">
-          <h3 className="text-xl font-semibold text-slate-900">Frequently Asked Questions</h3>
-          <div className="mt-5 space-y-4">
-            {[
-              ['How do I book a service?', 'Use the front page booking form or contact the business directly through the listed support channels.'],
-              ['Where can I see pricing or offerings?', 'Your services and products appear on the front page and can be expanded as content is added in the dashboard.'],
-              ['How quickly will I get a response?', 'Response times depend on the business workflow, but the help page provides the best direct contact options.']
-            ].map(([question, answer]) => (
-              <div key={question} className="rounded-2xl bg-white p-4">
-                <p className="font-semibold text-slate-900">{question}</p>
-                <p className="mt-2 text-slate-600">{answer}</p>
+      {offerings.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          {offerings.map((item, index) => (
+            <article
+              key={`${item.title || 'item'}-${index}`}
+              className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Item {index + 1}</p>
+                  <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+                    {item.title || `${offeringLabel} ${index + 1}`}
+                  </h3>
+                </div>
+                {'price' in item && item.price !== undefined ? (
+                  <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">
+                    ${item.price || 0}
+                  </span>
+                ) : null}
               </div>
-            ))}
-          </div>
+              <p className="mt-4 text-base leading-7 text-slate-600">
+                {item.description || 'More details coming soon.'}
+              </p>
+            </article>
+          ))}
         </div>
-      </div>
+      ) : (
+        <EmptyState message={`No ${offeringLabel.toLowerCase()} added yet.`} />
+      )}
     </SectionShell>
   );
 
-  const renderPolicyPage = () => (
+  const renderGalleryPage = () => (
     <SectionShell
-      eyebrow="Policy"
-      title="Policy overview"
-      description="This page gives you a professional policy presence even before custom legal text is added. It can later be replaced with business-specific privacy, refund, and data handling policies."
+      kicker="Visuals"
+      title="Gallery"
+      description="A stronger visual showcase with larger crops and a more modern editorial rhythm."
+      aside={
+        <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+          <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Visual Tone</p>
+          <p className="mt-3 text-sm leading-7 text-white/72">
+            Richer spacing and larger image surfaces help the business look more premium at a glance.
+          </p>
+        </div>
+      }
     >
-      <div className="space-y-4">
-        {[
-          {
-            title: 'Privacy',
-            body: 'Customer information submitted through this website is used only for communication, booking coordination, and service delivery unless otherwise stated.'
-          },
-          {
-            title: 'Data Handling',
-            body: 'Operational data such as contact submissions and bookings may be stored securely to help the business manage customer interactions.'
-          },
-          {
-            title: 'Service Policy',
-            body: 'Availability, turnaround times, pricing, and fulfillment terms may vary based on the business category and should be confirmed directly when needed.'
-          }
-        ].map(section => (
-          <div key={section.title} className="rounded-3xl bg-slate-50 p-6">
-            <h3 className="text-xl font-semibold text-slate-900">{section.title}</h3>
-            <p className="mt-3 leading-7 text-slate-600">{section.body}</p>
-          </div>
-        ))}
-      </div>
+      {images.length > 0 ? (
+        <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {images.map((image, index) => {
+            const tallCard = index % 3 === 0;
+            return (
+              <div
+                key={`${image.url}-${index}`}
+                className={`group overflow-hidden rounded-[1.9rem] border border-slate-200/75 bg-slate-100 shadow-sm ${
+                  tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
+                }`}
+              >
+                <img
+                  src={image.url}
+                  alt={image.alt || `Image ${index + 1}`}
+                  className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
+                    tallCard ? 'h-full min-h-[460px]' : 'h-[220px]'
+                  }`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState message="No gallery images available right now." />
+      )}
     </SectionShell>
   );
 
-  const renderTermsPage = () => (
+  const renderContactPage = () => (
     <SectionShell
-      eyebrow="Terms"
-      title="Terms & Conditions"
-      description="These default terms help establish expectations for site usage and customer interaction. They are general placeholders and can be customized later for each tenant."
+      kicker="Reach Out"
+      title="Contact"
+      description="A direct, user-facing contact section that feels part of the design system rather than an afterthought."
+      aside={
+        <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Response Paths</p>
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Surface the quickest ways for customers to start a conversation.
+          </p>
+        </div>
+      }
     >
-      <div className="grid gap-4">
-        {[
-          'By using this website, visitors agree to use the content and services lawfully and respectfully.',
-          'Bookings, product availability, and support commitments are subject to confirmation by the business.',
-          'Published content may be updated, revised, or removed at any time to reflect current offerings or business policies.',
-          'If you have questions about services or obligations, contact the business directly using the details on the Help page.'
-        ].map(item => (
-          <div key={item} className="rounded-2xl bg-slate-50 p-5 text-slate-600">
-            {item}
-          </div>
-        ))}
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Phone</p>
+          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.phone || 'Not provided'}</p>
+        </div>
+        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Email</p>
+          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.email || 'Not provided'}</p>
+        </div>
+        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Address</p>
+          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.address || 'Not provided'}</p>
+        </div>
       </div>
     </SectionShell>
   );
 
   const pageContent = {
-    'front-page': renderFrontPage(),
-    introduction: renderIntroductionPage(),
-    'about-us': renderAboutPage(),
-    dashboard: renderDashboardPage(),
-    'ai-mode': renderAiModePage(),
-    help: renderHelpPage(),
-    policy: renderPolicyPage(),
-    terms: renderTermsPage()
+    home: renderHomePage(),
+    about: renderAboutPage(),
+    offerings: renderOfferingsPage(),
+    gallery: renderGalleryPage(),
+    contact: renderContactPage()
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.05),_transparent_35%),linear-gradient(180deg,_#ffffff,_#f8fafc)]">
-      <div className="container space-y-8 py-8">
-        <header className="rounded-[2rem] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">Website Mode</p>
-              <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{tenant.name}</h1>
-              <p className="mt-2 text-slate-600">
-                Browse dedicated pages for company story, support, policy, dashboard, and AI-led presentation.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {sitePages.map(page => {
-                const isActive = page.id === activePage;
-                return (
-                  <button
-                    key={page.id}
-                    type="button"
-                    onClick={() => setActivePage(page.id)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                      isActive
-                        ? 'bg-slate-950 text-white shadow-lg'
-                        : 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {page.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </header>
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)] text-slate-900">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(250,204,21,0.12),transparent_26%),radial-gradient(circle_at_70%_50%,rgba(16,185,129,0.10),transparent_24%)]" />
 
-        {pageContent[activePage]}
+        <div className="relative mx-auto w-full max-w-[1600px] space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+          <nav className="sticky top-4 z-20 rounded-[2.2rem] border border-white/70 bg-white/76 px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] bg-slate-950 text-sm font-black uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]">
+                  {getInitials(tenant.name)}
+                </div>
+                <div>
+                  <p className="text-xl font-black tracking-[-0.04em] text-slate-950">{tenant.name || 'Business Website'}</p>
+                  <p className="text-sm capitalize text-slate-500">{businessTypeLabel}</p>
+                </div>
+              </div>
 
-        <footer className="rounded-[2rem] border border-slate-200 bg-white p-8 text-slate-700 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="font-semibold text-slate-900">Contact</p>
-              <p>{content?.contactInfo?.phone || 'Phone not set'}</p>
-              <p>{content?.contactInfo?.email || 'Email not set'}</p>
+              <div className="flex flex-wrap gap-2">
+                {sitePages.map(page => {
+                  const isActive = page.id === activePage;
+                  return (
+                    <button
+                      key={page.id}
+                      type="button"
+                      onClick={() => setActivePage(page.id)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                        isActive
+                          ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]'
+                          : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {page.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActivePage('contact')}
+                className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(59,130,246,0.24)] transition hover:brightness-95"
+              >
+                Contact
+              </button>
             </div>
-            <div>
-              <p className="text-sm text-slate-500">Subscription: {subscription?.status || 'inactive'}</p>
-              <p className="text-sm text-slate-500">Plan: {subscription?.plan || 'basic'}</p>
+          </nav>
+
+          {pageContent[activePage]}
+
+          <footer className="rounded-[2.1rem] border border-white/70 bg-white/80 p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-lg font-bold tracking-tight text-slate-950">{tenant.name || 'Business Website'}</p>
+                <p className="mt-1 text-slate-600">
+                  {contactInfo.email || contactInfo.phone || 'Contact details will appear here.'}
+                </p>
+              </div>
+              <div className="text-sm capitalize text-slate-500">{businessTypeLabel}</div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </div>
     </main>
   );

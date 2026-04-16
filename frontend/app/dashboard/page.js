@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -32,21 +33,21 @@ export default function DashboardPage() {
   const [form, setForm] = useState(initialForm);
   const [tenantId, setTenantId] = useState(null);
   const [authToken, setAuthToken] = useState(null);
+  const [websiteCreated, setWebsiteCreated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    setAuthToken(token);
-
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('currentTenant') : null;
-    if (stored) {
-      const savedTenant = JSON.parse(stored);
-      fetchTenant(savedTenant.slug, savedTenant._id);
-    } else if (token) {
-      fetchCurrentTenant(token);
+    if (!token) {
+      setCheckingAuth(false);
+      return;
     }
+
+    setAuthToken(token);
+    fetchCurrentTenant(token);
   }, []);
 
   const fetchCurrentTenant = async token => {
@@ -54,27 +55,36 @@ export default function DashboardPage() {
       const response = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       if (!response.ok) {
         localStorage.removeItem('authToken');
+        localStorage.removeItem('currentTenant');
         setAuthToken(null);
+        setCheckingAuth(false);
         return;
       }
+
       const data = await response.json();
       const tenant = data.tenant;
       updateFormFromTenant(tenant);
       setTenantId(tenant._id);
+      setWebsiteCreated(Boolean(tenant.websiteCreated && tenant.slug));
+      localStorage.setItem('currentTenant', JSON.stringify(tenant));
     } catch (err) {
       console.error(err);
+      setError('Unable to load your account.');
+    } finally {
+      setCheckingAuth(false);
     }
   };
 
   const updateFormFromTenant = tenant => {
     setForm(prev => ({
       ...prev,
-      name: tenant.name,
-      slug: tenant.slug,
-      subdomain: tenant.subdomain,
-      businessType: tenant.businessType,
+      name: tenant.name || '',
+      slug: tenant.slug || '',
+      subdomain: tenant.subdomain || '',
+      businessType: tenant.businessType || 'freelancer',
       owner: {
         email: tenant.owner?.email || '',
         password: ''
@@ -94,18 +104,6 @@ export default function DashboardPage() {
         layout: tenant.theme?.layout || 'modern'
       }
     }));
-  };
-
-  const fetchTenant = async (slug, id) => {
-    try {
-      const response = await fetch(`/api/tenants/${slug}`);
-      if (!response.ok) return;
-      const tenant = await response.json();
-      setTenantId(tenant._id);
-      updateFormFromTenant(tenant);
-    } catch (err) {
-      console.error(err);
-    }
   };
 
   const handleFieldChange = (section, key, value) => {
@@ -172,10 +170,10 @@ export default function DashboardPage() {
   const uploadImage = async file => {
     const payload = new FormData();
     payload.append('file', file);
-    payload.append('slug', form.slug || 'public');
 
     const response = await fetch('/api/upload', {
       method: 'POST',
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
       body: payload
     });
     const data = await response.json();
@@ -188,14 +186,20 @@ export default function DashboardPage() {
   const handleImageUpload = async event => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (!authToken) {
+      setError('Please log in before uploading images.');
+      return;
+    }
+
     try {
+      setError(null);
       setStatus('Uploading image...');
       const url = await uploadImage(file);
       setForm(prev => ({
         ...prev,
         content: { ...prev.content, images: [...prev.content.images, { url, alt: file.name }] }
       }));
-      setStatus('Image uploaded successfully. Save to update tenant.');
+      setStatus('Image uploaded successfully. Save your website to publish it.');
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -207,16 +211,11 @@ export default function DashboardPage() {
     event.preventDefault();
     setError(null);
 
-    if (tenantId && !authToken) {
-      setError('Please log in to update your website.');
+    if (!authToken || !tenantId) {
+      setError('Please log in before creating or editing your website.');
       setStatus(null);
       return;
     }
-
-    const method = tenantId ? 'PUT' : 'POST';
-    const url = tenantId
-      ? `/api/tenants/${tenantId}`
-      : '/api/auth/register';
 
     const payload = {
       ...form,
@@ -231,46 +230,81 @@ export default function DashboardPage() {
       }
     };
 
-    setStatus(tenantId ? 'Updating website...' : 'Creating website...');
-    const response = await fetch(url, {
-      method,
+    setStatus(websiteCreated ? 'Updating website...' : 'Creating website...');
+    const response = await fetch(`/api/tenants/${tenantId}`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        ...(tenantId && authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        Authorization: `Bearer ${authToken}`
       },
       body: JSON.stringify(payload)
     });
     const data = await response.json();
 
     if (!response.ok) {
-      setError(data.error || data.message || 'Failed to save tenant.');
+      setError(data.error || data.message || 'Failed to save website.');
       setStatus(null);
-      return;
-    }
-
-    if (!tenantId) {
-      localStorage.setItem('authToken', data.token);
-      localStorage.setItem('currentTenant', JSON.stringify(data.tenant));
-      setAuthToken(data.token);
-      setTenantId(data.tenant._id);
-      setStatus('Website created successfully! Redirecting...');
-      router.push(`/site/${data.tenant.slug}`);
       return;
     }
 
     localStorage.setItem('currentTenant', JSON.stringify(data));
     setTenantId(data._id);
+    setWebsiteCreated(Boolean(data.websiteCreated));
     updateFormFromTenant(data);
-    setStatus('Website updated successfully.');
+    setStatus(websiteCreated ? 'Website updated successfully.' : 'Website created successfully.');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('currentTenant');
+    router.push('/auth');
+  };
+
+  if (checkingAuth) {
+    return (
+      <main className="container py-12">
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+          <p className="text-slate-600">Checking your account...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!authToken) {
+    return (
+      <main className="container py-12">
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+          <h1 className="text-3xl font-bold">Login Required</h1>
+          <p className="mt-3 text-slate-600">
+            Sign in first, then you can create your website. After login, only you can edit your own website.
+          </p>
+          <div className="mt-6">
+            <Link href="/auth" className="rounded-full bg-primary px-6 py-3 text-white inline-block">
+              Go To Login
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="container">
+    <main className="container py-12">
       <div className="rounded-3xl border border-slate-200 p-10 shadow-sm">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="mt-2 text-slate-600">Create your website and manage your content, theme, and subscription.</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">{websiteCreated ? 'Edit Website' : 'Create Website'}</h1>
+            <p className="mt-2 text-slate-600">
+              You are logged in as {form.owner.email}. {websiteCreated ? 'Update only your own website here.' : 'Complete your website details to publish your site.'}
+            </p>
+          </div>
+          <button type="button" onClick={handleLogout} className="rounded-full border border-slate-300 px-5 py-2.5 text-sm">
+            Logout
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-          <section className="space-y-4 rounded-3xl border border-slate-200 p-6 bg-slate-50">
+          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <h2 className="text-xl font-semibold">Website Details</h2>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
@@ -318,50 +352,24 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
-            {!tenantId ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Owner Email</span>
-                  <input
-                    type="email"
-                    value={form.owner.email}
-                    onChange={e => handleOwnerChange('email', e.target.value.toLowerCase())}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
-                    placeholder="owner@business.com"
-                    required
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Owner Password</span>
-                  <input
-                    type="password"
-                    value={form.owner.password}
-                    onChange={e => handleOwnerChange('password', e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
-                    placeholder="Enter a secure password"
-                    required
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-slate-200 p-4 bg-slate-50">
-                <p className="text-sm text-slate-700">Signed in as <span className="font-semibold">{form.owner.email}</span>.</p>
-                <label className="block mt-4">
-                  <span className="text-sm font-medium text-slate-700">New password (optional)</span>
-                  <input
-                    type="password"
-                    value={form.owner.password}
-                    onChange={e => handleOwnerChange('password', e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
-                    placeholder="Leave blank to keep current password"
-                  />
-                </label>
-              </div>
-            )}
+            <div className="rounded-3xl border border-slate-200 bg-white p-4">
+              <p className="text-sm text-slate-700">Owner email</p>
+              <p className="mt-1 font-semibold text-slate-900">{form.owner.email}</p>
+              <label className="mt-4 block">
+                <span className="text-sm font-medium text-slate-700">New password (optional)</span>
+                <input
+                  type="password"
+                  value={form.owner.password}
+                  onChange={e => handleOwnerChange('password', e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                  placeholder="Leave blank to keep current password"
+                />
+              </label>
+            </div>
           </section>
 
-          <section className="space-y-4 rounded-3xl border border-slate-200 p-6 bg-slate-50">
-            <h2 className="text-xl font-semibold">Page Content</h2>
+          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <h2 className="text-xl font-semibold">Website Content</h2>
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Title</span>
               <input
@@ -381,6 +389,7 @@ export default function DashboardPage() {
                 placeholder="Describe your business and services."
               />
             </label>
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Services</h3>
@@ -412,15 +421,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Images</h3>
-              <input type="file" accept="image/*" onChange={handleImageUpload} />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {form.content.images.map((image, index) => (
-                  <img key={index} src={image.url} alt={image.alt || `Upload ${index + 1}`} className="h-40 w-full rounded-3xl object-cover" />
-                ))}
-              </div>
-            </div>
+
             <div className="grid gap-4 md:grid-cols-3">
               <input
                 value={form.content.contactInfo.phone}
@@ -441,9 +442,19 @@ export default function DashboardPage() {
                 placeholder="Address"
               />
             </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Images</h3>
+              <input type="file" accept="image/*" onChange={handleImageUpload} />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {form.content.images.map((image, index) => (
+                  <img key={index} src={image.url} alt={image.alt || `Upload ${index + 1}`} className="h-40 w-full rounded-3xl object-cover" />
+                ))}
+              </div>
+            </div>
           </section>
 
-          <section className="space-y-4 rounded-3xl border border-slate-200 p-6 bg-slate-50">
+          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <h2 className="text-xl font-semibold">Theme</h2>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
@@ -490,14 +501,15 @@ export default function DashboardPage() {
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <button type="submit" className="rounded-full bg-primary px-6 py-3 text-white">
-              {tenantId ? 'Update Website' : 'Create Website'}
+              {websiteCreated ? 'Update Website' : 'Create Website'}
             </button>
-            {tenantId && (
+            {websiteCreated && (
               <button type="button" onClick={() => router.push(`/site/${form.slug}`)} className="rounded-full border border-slate-300 px-6 py-3">
                 Preview Website
               </button>
             )}
           </div>
+
           {status && <p className="text-sm text-green-700">{status}</p>}
           {error && <p className="text-sm text-red-700">{error}</p>}
         </form>

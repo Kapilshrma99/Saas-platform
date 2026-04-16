@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
-const { getRedisClient } = require('../config/redis');
 
 const sanitizeTenant = tenant => {
   if (!tenant) return tenant;
@@ -22,7 +21,7 @@ const createToken = tenant => {
 
 const registerTenant = async (req, res) => {
   try {
-    const { owner, ...payload } = req.body;
+    const { owner } = req.body;
     if (!owner?.email || !owner?.password) {
       return res.status(400).json({ error: 'Owner email and password are required' });
     }
@@ -33,18 +32,14 @@ const registerTenant = async (req, res) => {
       return res.status(400).json({ error: 'Owner email already registered' });
     }
 
-    payload.slug = payload.slug?.toLowerCase();
-    payload.subdomain = payload.subdomain?.toLowerCase();
-    payload.owner = {
-      email: normalizedEmail,
-      password: await bcrypt.hash(owner.password, 10)
-    };
-
-    const tenant = new Tenant(payload);
+    const tenant = new Tenant({
+      owner: {
+        email: normalizedEmail,
+        password: await bcrypt.hash(owner.password, 10)
+      },
+      websiteCreated: false
+    });
     await tenant.save();
-
-    const redis = getRedisClient();
-    if (redis) await redis.del(`tenant:${tenant.slug}`);
 
     const token = createToken(tenant);
     res.status(201).json({ tenant: sanitizeTenant(tenant.toObject()), token });

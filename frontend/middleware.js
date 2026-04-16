@@ -18,11 +18,20 @@ function getSubdomain(hostname) {
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+
+  if (pathname.startsWith('/site')) {
+    requestHeaders.set('x-tenant-site', '1');
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders
+      }
+    });
+  }
 
   if (
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/site') ||
     PUBLIC_FILE.test(pathname)
   ) {
     return NextResponse.next();
@@ -37,7 +46,12 @@ export function middleware(request) {
 
   const rewriteUrl = request.nextUrl.clone();
   rewriteUrl.pathname = `/site/${subdomain}`;
-  return NextResponse.rewrite(rewriteUrl);
+  requestHeaders.set('x-tenant-site', '1');
+  return NextResponse.rewrite(rewriteUrl, {
+    request: {
+      headers: requestHeaders
+    }
+  });
 }
 
 export const config = {

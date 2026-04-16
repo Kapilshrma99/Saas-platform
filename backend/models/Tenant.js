@@ -1,14 +1,15 @@
 const mongoose = require('mongoose');
 
 const TenantSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  slug: { type: String, required: true, unique: true, lowercase: true },
-  subdomain: { type: String, required: true, unique: true, lowercase: true },
-  businessType: { type: String, required: true },
+  name: { type: String, trim: true },
+  slug: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+  subdomain: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+  businessType: { type: String, trim: true },
   owner: {
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true }
   },
+  websiteCreated: { type: Boolean, default: false },
   content: {
     title: { type: String, default: 'My Business' },
     description: { type: String, default: 'Describe your services here.' },

@@ -5,7 +5,7 @@ const uploadImage = async (req, res) => {
     await ensureBucket();
     const file = req.file;
     if (!file) return res.status(400).json({ message: 'Image is required' });
-    const slug = req.body.slug || 'public';
+    const slug = req.tenant?.slug || `tenant-${req.tenant?._id}`;
     const objectName = `uploads/${slug}/${Date.now()}-${file.originalname}`;
     await minioClient.putObject('uploads', objectName, file.buffer);
     const url = `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/uploads/${objectName}`;

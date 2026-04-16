@@ -23,11 +23,11 @@ export default function HomePage() {
                 Launch a modern, high-converting business website with dynamic themes, integrated bookings, and seamless subscription payments. No code required.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
-                <Link href="/pricing" className="rounded-full bg-indigo-600 px-8 py-4 text-center font-bold text-white shadow-xl shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-95">
+                <Link href="/auth" className="rounded-full bg-indigo-600 px-8 py-4 text-center font-bold text-white shadow-xl shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-95">
                   Get Started Free
                 </Link>
-                <Link href="/dashboard" className="rounded-full border border-slate-200 bg-white px-8 py-4 text-center font-bold text-slate-900 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95">
-                  Live Demo
+                <Link href="/auth" className="rounded-full border border-slate-200 bg-white px-8 py-4 text-center font-bold text-slate-900 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95">
+                  Login To Manage
                 </Link>
               </div>
               <div className="mt-8 flex items-center justify-center gap-4 text-sm text-slate-500 lg:justify-start">
