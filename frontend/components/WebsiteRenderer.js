@@ -119,6 +119,7 @@ function getOfferings(content, businessType) {
 
 export default function WebsiteRenderer({ tenant }) {
   const [activePage, setActivePage] = useState('home');
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   useEffect(() => {
     if (tenant?.theme) {
@@ -128,7 +129,12 @@ export default function WebsiteRenderer({ tenant }) {
 
   useEffect(() => {
     setActivePage('home');
+    setIsNavOpen(false);
   }, [tenant?._id]);
+
+  useEffect(() => {
+    setIsNavOpen(false);
+  }, [activePage]);
 
   if (!tenant) {
     return (
@@ -147,6 +153,8 @@ export default function WebsiteRenderer({ tenant }) {
   const offerings = getOfferings(content, tenant.businessType);
   const contactInfo = content.contactInfo || {};
   const images = content.images || [];
+  const heroImage = content.heroImage || {};
+  const heroBackgroundImage = heroImage.url || images[0]?.url || '';
   const offeringLabel = preset.offeringLabel;
   const heroTitle = content.title || preset.homeTitle;
   const aboutText =
@@ -170,11 +178,31 @@ export default function WebsiteRenderer({ tenant }) {
 
   const renderHomePage = () => (
     <div className="space-y-8">
-      <section className={`relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${preset.surfaceClass}`}>
+      <section
+        className={`relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${
+          heroBackgroundImage ? 'bg-slate-950/70 bg-cover bg-center bg-no-repeat' : preset.surfaceClass
+        }`}
+        style={
+          heroBackgroundImage
+            ? {
+                backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.42) 42%, rgba(15,23,42,0.28)), url("${heroBackgroundImage}")`,
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: 'cover'
+              }
+            : undefined
+        }
+      >
         <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-3xl" />
         <div className="absolute bottom-[-3rem] right-[-2rem] h-56 w-56 rounded-full bg-[var(--secondary)]/15 blur-3xl" />
 
-        <div className="relative mx-auto grid max-w-[1500px] gap-10 lg:grid-cols-[minmax(0,1.3fr)_22rem] lg:items-center xl:grid-cols-[minmax(0,1.4fr)_23rem]">
+        <div
+          className={`relative mx-auto grid max-w-[1500px] gap-10 lg:items-center ${
+            heroBackgroundImage
+              ? 'lg:grid-cols-[minmax(0,1.25fr)_22rem] xl:grid-cols-[minmax(0,1.35fr)_23rem]'
+              : 'lg:grid-cols-[minmax(0,1.3fr)_22rem] xl:grid-cols-[minmax(0,1.4fr)_23rem]'
+          }`}
+        >
           <div className="max-w-[820px] space-y-8">
             <div className="inline-flex items-center gap-3 rounded-full border border-white/80 bg-white/85 px-4 py-2 text-sm text-slate-600 shadow-sm">
               <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_6px_rgba(255,255,255,0.65)]" />
@@ -480,7 +508,30 @@ export default function WebsiteRenderer({ tenant }) {
 
         <div className="relative mx-auto w-full max-w-[1600px] space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
           <nav className="sticky top-4 z-20 rounded-[2.2rem] border border-white/70 bg-white/76 px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center justify-between gap-4 xl:hidden">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] bg-slate-950 text-sm font-black uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]">
+                  {getInitials(tenant.name)}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black tracking-[-0.04em] text-slate-950">
+                    {tenant.name || 'Business Website'}
+                  </p>
+                  <p className="truncate text-sm capitalize text-slate-500">{businessTypeLabel}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNavOpen(open => !open)}
+                aria-expanded={isNavOpen}
+                aria-label="Toggle navigation menu"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white/88 text-slate-700 transition hover:bg-white"
+              >
+                <span className="text-lg leading-none">{isNavOpen ? '×' : '☰'}</span>
+              </button>
+            </div>
+
+            <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] bg-slate-950 text-sm font-black uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]">
                   {getInitials(tenant.name)}
@@ -491,7 +542,7 @@ export default function WebsiteRenderer({ tenant }) {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {sitePages.map(page => {
                   const isActive = page.id === activePage;
                   return (
@@ -519,19 +570,105 @@ export default function WebsiteRenderer({ tenant }) {
                 Contact
               </button>
             </div>
+
+            <div className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 xl:hidden ${isNavOpen ? 'mt-4 max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="space-y-4 border-t border-white/70 pt-4">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {sitePages.map(page => {
+                    const isActive = page.id === activePage;
+                    return (
+                      <button
+                        key={page.id}
+                        type="button"
+                        onClick={() => setActivePage(page.id)}
+                        className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+                          isActive
+                            ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]'
+                            : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {page.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActivePage('contact')}
+                  className="w-full rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(59,130,246,0.24)] transition hover:brightness-95"
+                >
+                  Contact
+                </button>
+              </div>
+            </div>
           </nav>
 
           {pageContent[activePage]}
 
-          <footer className="rounded-[2.1rem] border border-white/70 bg-white/80 p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-lg font-bold tracking-tight text-slate-950">{tenant.name || 'Business Website'}</p>
-                <p className="mt-1 text-slate-600">
-                  {contactInfo.email || contactInfo.phone || 'Contact details will appear here.'}
-                </p>
+          <footer className="rounded-[2.1rem] border border-white/70 bg-white/80 p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_0.8fr_0.9fr]">
+              <div className="space-y-5">
+                <div>
+                  <p className="text-lg font-bold tracking-tight text-slate-950">{tenant.name || 'Business Website'}</p>
+                  <p className="mt-2 max-w-xl text-sm leading-7 text-slate-600">
+                    {content.description || `${tenant.name || 'This business'} offers a polished digital presence with clear navigation, highlights, and direct contact paths.`}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
+                    {businessTypeLabel}
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
+                    {offerings.length} {offeringLabel.toLowerCase()}
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
+                    {images.length} gallery items
+                  </div>
+                </div>
               </div>
-              <div className="text-sm capitalize text-slate-500">{businessTypeLabel}</div>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Navigation</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {sitePages.map(page => (
+                    <button
+                      key={page.id}
+                      type="button"
+                      onClick={() => setActivePage(page.id)}
+                      className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                    >
+                      {page.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Contact Details</p>
+                <div className="space-y-3 text-sm leading-7 text-slate-600">
+                  <p>
+                    <span className="font-semibold text-slate-950">Phone:</span> {contactInfo.phone || 'Not provided'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-slate-950">Email:</span> {contactInfo.email || 'Not provided'}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-slate-950">Address:</span> {contactInfo.address || 'Not provided'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 border-t border-slate-200/80 pt-6 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+              <p>{tenant.name || 'Business Website'} is ready for enquiries, bookings, and discovery.</p>
+              <button
+                type="button"
+                onClick={() => setActivePage('contact')}
+                className="rounded-full bg-slate-950 px-5 py-2.5 font-semibold text-white transition hover:bg-slate-900"
+              >
+                Contact Now
+              </button>
             </div>
           </footer>
         </div>

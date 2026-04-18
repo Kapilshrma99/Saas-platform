@@ -16,6 +16,7 @@ const initialForm = {
   content: {
     title: '',
     description: '',
+    heroImage: { url: '', alt: '' },
     services: [{ title: '', description: '' }],
     products: [{ title: '', description: '', price: 0 }],
     images: [],
@@ -92,6 +93,7 @@ export default function DashboardPage() {
       content: {
         title: tenant.content?.title || '',
         description: tenant.content?.description || '',
+        heroImage: tenant.content?.heroImage || { url: '', alt: '' },
         services: tenant.content?.services?.length ? tenant.content.services : [{ title: '', description: '' }],
         products: tenant.content?.products?.length ? tenant.content.products : [{ title: '', description: '', price: 0 }],
         images: tenant.content?.images || [],
@@ -143,6 +145,19 @@ export default function DashboardPage() {
         ...prev.content,
         contactInfo: {
           ...prev.content.contactInfo,
+          [key]: value
+        }
+      }
+    }));
+  };
+
+  const handleHeroImageChange = (key, value) => {
+    setForm(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        heroImage: {
+          ...prev.content.heroImage,
           [key]: value
         }
       }
@@ -207,6 +222,33 @@ export default function DashboardPage() {
     }
   };
 
+  const handleHeroImageUpload = async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!authToken) {
+      setError('Please log in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading hero image...');
+      const url = await uploadImage(file);
+      setForm(prev => ({
+        ...prev,
+        content: {
+          ...prev.content,
+          heroImage: { url, alt: prev.content.heroImage?.alt || file.name }
+        }
+      }));
+      setStatus('Hero image uploaded successfully. Save your website to publish it.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    }
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setError(null);
@@ -225,6 +267,7 @@ export default function DashboardPage() {
       },
       content: {
         ...form.content,
+        heroImage: form.content.heroImage?.url ? form.content.heroImage : { url: '', alt: '' },
         services: form.content.services.filter(service => service.title || service.description),
         products: form.content.products.filter(product => product.title || product.description)
       }
@@ -389,6 +432,41 @@ export default function DashboardPage() {
                 placeholder="Describe your business and services."
               />
             </label>
+
+            <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+              <div>
+                <h3 className="text-lg font-semibold">Hero Image</h3>
+                <p className="mt-1 text-sm text-slate-600">This image appears in the main hero section of the website homepage.</p>
+              </div>
+              <input type="file" accept="image/*" onChange={handleHeroImageUpload} />
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Hero image alt text</span>
+                  <input
+                    value={form.content.heroImage.alt}
+                    onChange={e => handleHeroImageChange('alt', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    placeholder="Describe the hero image"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-slate-700">Hero image URL</span>
+                  <input
+                    value={form.content.heroImage.url}
+                    onChange={e => handleHeroImageChange('url', e.target.value)}
+                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    placeholder="https://..."
+                  />
+                </label>
+              </div>
+              {form.content.heroImage.url ? (
+                <img
+                  src={form.content.heroImage.url}
+                  alt={form.content.heroImage.alt || 'Hero preview'}
+                  className="h-56 w-full rounded-3xl object-cover"
+                />
+              ) : null}
+            </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">

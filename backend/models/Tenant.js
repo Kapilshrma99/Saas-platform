@@ -13,6 +13,10 @@ const TenantSchema = new mongoose.Schema({
   content: {
     title: { type: String, default: 'My Business' },
     description: { type: String, default: 'Describe your services here.' },
+    heroImage: {
+      url: String,
+      alt: String
+    },
     services: [{ title: String, description: String }],
     products: [{ title: String, description: String, price: Number }],
     images: [{ url: String, alt: String }],
