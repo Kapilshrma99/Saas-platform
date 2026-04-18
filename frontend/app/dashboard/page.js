@@ -17,6 +17,11 @@ const initialForm = {
     title: '',
     description: '',
     heroImage: { url: '', alt: '' },
+    heroCarousel: {
+      direction: 'side',
+      speed: 4,
+      images: []
+    },
     services: [{ title: '', description: '' }],
     products: [{ title: '', description: '', price: 0 }],
     images: [],
@@ -94,6 +99,11 @@ export default function DashboardPage() {
         title: tenant.content?.title || '',
         description: tenant.content?.description || '',
         heroImage: tenant.content?.heroImage || { url: '', alt: '' },
+        heroCarousel: {
+          direction: tenant.content?.heroCarousel?.direction || 'side',
+          speed: tenant.content?.heroCarousel?.speed || 4,
+          images: tenant.content?.heroCarousel?.images || []
+        },
         services: tenant.content?.services?.length ? tenant.content.services : [{ title: '', description: '' }],
         products: tenant.content?.products?.length ? tenant.content.products : [{ title: '', description: '', price: 0 }],
         images: tenant.content?.images || [],
@@ -164,6 +174,34 @@ export default function DashboardPage() {
     }));
   };
 
+  const handleHeroCarouselChange = (key, value) => {
+    setForm(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        heroCarousel: {
+          ...prev.content.heroCarousel,
+          [key]: value
+        }
+      }
+    }));
+  };
+
+  const handleHeroCarouselImageChange = (index, key, value) => {
+    const nextImages = [...(form.content.heroCarousel?.images || [])];
+    nextImages[index] = { ...nextImages[index], [key]: value };
+    handleHeroCarouselChange('images', nextImages);
+  };
+
+  const removeHeroCarouselImage = index => {
+    const nextImages = (form.content.heroCarousel?.images || []).filter((_, imageIndex) => imageIndex !== index);
+    handleHeroCarouselChange('images', nextImages);
+  };
+
+  const addEmptyHeroCarouselImage = () => {
+    handleHeroCarouselChange('images', [...(form.content.heroCarousel?.images || []), { url: '', alt: '' }]);
+  };
+
   const handleServiceChange = (index, key, value) => {
     const services = [...form.content.services];
     services[index] = { ...services[index], [key]: value };
@@ -219,6 +257,8 @@ export default function DashboardPage() {
       console.error(err);
       setError(err.message);
       setStatus(null);
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -246,6 +286,46 @@ export default function DashboardPage() {
       console.error(err);
       setError(err.message);
       setStatus(null);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const handleHeroCarouselUpload = async event => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    if (!authToken) {
+      setError('Please log in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading hero carousel images...');
+      const uploadedImages = await Promise.all(
+        files.map(async file => {
+          const url = await uploadImage(file);
+          return { url, alt: file.name };
+        })
+      );
+
+      setForm(prev => ({
+        ...prev,
+        content: {
+          ...prev.content,
+          heroCarousel: {
+            ...prev.content.heroCarousel,
+            images: [...(prev.content.heroCarousel?.images || []), ...uploadedImages]
+          }
+        }
+      }));
+      setStatus('Hero carousel images uploaded successfully. Save your website to publish them.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -268,6 +348,11 @@ export default function DashboardPage() {
       content: {
         ...form.content,
         heroImage: form.content.heroImage?.url ? form.content.heroImage : { url: '', alt: '' },
+        heroCarousel: {
+          direction: form.content.heroCarousel?.direction === 'upward' ? 'upward' : 'side',
+          speed: Math.min(Math.max(Number(form.content.heroCarousel?.speed) || 4, 1), 15),
+          images: (form.content.heroCarousel?.images || []).filter(image => image.url)
+        },
         services: form.content.services.filter(service => service.title || service.description),
         products: form.content.products.filter(product => product.title || product.description)
       }
@@ -466,6 +551,101 @@ export default function DashboardPage() {
                   className="h-56 w-full rounded-3xl object-cover"
                 />
               ) : null}
+            </div>
+
+            <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+              <div>
+                <h3 className="text-lg font-semibold">Hero Carousel</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Add multiple hero images and choose whether they slide from the side or upward.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem]">
+                <div>
+                  <span className="text-sm font-medium text-slate-700">Upload hero carousel images</span>
+                  <input type="file" accept="image/*" multiple onChange={handleHeroCarouselUpload} className="mt-2 block w-full" />
+                  <p className="mt-2 text-sm text-slate-500">You can select multiple images at once and upload more later too.</p>
+                </div>
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Slide direction</span>
+                    <select
+                      value={form.content.heroCarousel.direction}
+                      onChange={e => handleHeroCarouselChange('direction', e.target.value)}
+                      className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    >
+                      <option value="side">Side</option>
+                      <option value="upward">Upward</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">Slide speed in seconds</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="15"
+                      step="1"
+                      value={form.content.heroCarousel.speed}
+                      onChange={e => handleHeroCarouselChange('speed', e.target.value)}
+                      className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={addEmptyHeroCarouselImage}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700"
+              >
+                Add Carousel Slide
+              </button>
+
+              {form.content.heroCarousel.images.length > 0 ? (
+                <div className="space-y-4">
+                  {form.content.heroCarousel.images.map((image, index) => (
+                    <div key={`${image.url}-${index}`} className="rounded-3xl border border-slate-200 p-4">
+                      <div className="grid gap-4 lg:grid-cols-[12rem_minmax(0,1fr)]">
+                        <img
+                          src={image.url}
+                          alt={image.alt || `Hero slide ${index + 1}`}
+                          className="h-40 w-full rounded-2xl object-cover"
+                        />
+                        <div className="space-y-3">
+                          <label className="block">
+                            <span className="text-sm font-medium text-slate-700">Slide alt text</span>
+                            <input
+                              value={image.alt || ''}
+                              onChange={e => handleHeroCarouselImageChange(index, 'alt', e.target.value)}
+                              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                              placeholder={`Hero slide ${index + 1}`}
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="text-sm font-medium text-slate-700">Slide image URL</span>
+                            <input
+                              value={image.url || ''}
+                              onChange={e => handleHeroCarouselImageChange(index, 'url', e.target.value)}
+                              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3"
+                              placeholder="https://..."
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => removeHeroCarouselImage(index)}
+                            className="text-sm font-medium text-red-700"
+                          >
+                            Remove slide
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No hero carousel images added yet.</p>
+              )}
             </div>
 
             <div className="space-y-4">

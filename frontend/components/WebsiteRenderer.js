@@ -120,6 +120,7 @@ function getOfferings(content, businessType) {
 export default function WebsiteRenderer({ tenant }) {
   const [activePage, setActivePage] = useState('home');
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
 
   useEffect(() => {
     if (tenant?.theme) {
@@ -130,36 +131,36 @@ export default function WebsiteRenderer({ tenant }) {
   useEffect(() => {
     setActivePage('home');
     setIsNavOpen(false);
+    setActiveHeroSlide(0);
   }, [tenant?._id]);
 
   useEffect(() => {
     setIsNavOpen(false);
   }, [activePage]);
 
-  if (!tenant) {
-    return (
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="rounded-3xl border border-slate-200 p-10 text-center shadow-sm">
-          <h1 className="text-3xl font-bold">Website not found</h1>
-          <p className="mt-3 text-slate-600">Check your link and try again.</p>
-        </div>
-      </main>
-    );
-  }
-
-  const content = tenant.content || {};
-  const businessTypeLabel = getBusinessTypeLabel(tenant.businessType);
-  const preset = businessPresets[tenant.businessType] || businessPresets.default;
-  const offerings = getOfferings(content, tenant.businessType);
+  const content = tenant?.content || {};
+  const businessTypeLabel = getBusinessTypeLabel(tenant?.businessType);
+  const preset = businessPresets[tenant?.businessType] || businessPresets.default;
+  const offerings = getOfferings(content, tenant?.businessType);
   const contactInfo = content.contactInfo || {};
   const images = content.images || [];
   const heroImage = content.heroImage || {};
-  const heroBackgroundImage = heroImage.url || images[0]?.url || '';
+  const heroCarousel = content.heroCarousel || {};
+  const heroSlideDirection = heroCarousel.direction === 'upward' ? 'upward' : 'side';
+  const heroSlideSpeed = Math.min(Math.max(Number(heroCarousel.speed) || 4, 1), 15);
+  const heroSlides = (heroCarousel.images || []).filter(image => image?.url);
+  const fallbackHeroSlides = heroImage.url
+    ? [{ url: heroImage.url, alt: heroImage.alt || `${tenant.name || 'Business'} hero image` }]
+    : images[0]?.url
+      ? [{ url: images[0].url, alt: images[0].alt || `${tenant.name || 'Business'} hero image` }]
+      : [];
+  const resolvedHeroSlides = heroSlides.length > 0 ? heroSlides : fallbackHeroSlides;
+  const hasHeroBackground = resolvedHeroSlides.length > 0;
   const offeringLabel = preset.offeringLabel;
   const heroTitle = content.title || preset.homeTitle;
   const aboutText =
-    content.description || `${tenant.name || 'This business'} shares its story, offerings, and contact information here.`;
-  const showBookingForm = tenant.businessType !== 'shopping';
+    content.description || `${tenant?.name || 'This business'} shares its story, offerings, and contact information here.`;
+  const showBookingForm = tenant?.businessType !== 'shopping';
 
   const stats = useMemo(
     () => [
@@ -176,29 +177,84 @@ export default function WebsiteRenderer({ tenant }) {
     contactInfo.email || contactInfo.phone || 'Direct contact ready'
   ];
 
+  useEffect(() => {
+    if (resolvedHeroSlides.length <= 1) {
+      setActiveHeroSlide(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setActiveHeroSlide(currentIndex => (currentIndex + 1) % resolvedHeroSlides.length);
+    }, heroSlideSpeed * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [heroSlideSpeed, resolvedHeroSlides.length]);
+
+  useEffect(() => {
+    if (activeHeroSlide >= resolvedHeroSlides.length) {
+      setActiveHeroSlide(0);
+    }
+  }, [activeHeroSlide, resolvedHeroSlides.length]);
+
+  if (!tenant) {
+    return (
+      <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-slate-200 p-10 text-center shadow-sm">
+          <h1 className="text-3xl font-bold">Website not found</h1>
+          <p className="mt-3 text-slate-600">Check your link and try again.</p>
+        </div>
+      </main>
+    );
+  }
+
   const renderHomePage = () => (
     <div className="space-y-8">
       <section
         className={`relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${
-          heroBackgroundImage ? 'bg-slate-950/70 bg-cover bg-center bg-no-repeat' : preset.surfaceClass
+          hasHeroBackground ? 'bg-slate-950/70' : preset.surfaceClass
         }`}
-        style={
-          heroBackgroundImage
-            ? {
-                backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.42) 42%, rgba(15,23,42,0.28)), url("${heroBackgroundImage}")`,
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: 'cover'
-              }
-            : undefined
-        }
       >
+        {hasHeroBackground ? (
+          <>
+            <div className="absolute inset-0 overflow-hidden">
+              <div
+                className={`h-full w-full transition-transform duration-700 ease-out ${
+                  heroSlideDirection === 'upward' ? 'flex flex-col' : 'flex'
+                }`}
+                style={
+                  heroSlideDirection === 'upward'
+                    ? {
+                        transform: `translateY(-${activeHeroSlide * 100}%)`
+                      }
+                    : {
+                        transform: `translateX(-${activeHeroSlide * 100}%)`
+                      }
+                }
+              >
+                {resolvedHeroSlides.map((image, index) => (
+                  <div
+                    key={`${image.url}-${index}`}
+                    className="bg-cover bg-center bg-no-repeat"
+                    style={{
+                      backgroundImage: `url("${image.url}")`,
+                      flex: '0 0 100%',
+                      width: '100%',
+                      height: '100%'
+                    }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(255,255,255,0.42)_42%,rgba(15,23,42,0.36))]" />
+          </>
+        ) : null}
         <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-3xl" />
         <div className="absolute bottom-[-3rem] right-[-2rem] h-56 w-56 rounded-full bg-[var(--secondary)]/15 blur-3xl" />
 
         <div
           className={`relative mx-auto grid max-w-[1500px] gap-10 lg:items-center ${
-            heroBackgroundImage
+            hasHeroBackground
               ? 'lg:grid-cols-[minmax(0,1.25fr)_22rem] xl:grid-cols-[minmax(0,1.35fr)_23rem]'
               : 'lg:grid-cols-[minmax(0,1.3fr)_22rem] xl:grid-cols-[minmax(0,1.4fr)_23rem]'
           }`}
@@ -245,6 +301,27 @@ export default function WebsiteRenderer({ tenant }) {
                 </div>
               ))}
             </div>
+
+            {resolvedHeroSlides.length > 1 ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {resolvedHeroSlides.map((image, index) => (
+                    <button
+                      key={`${image.url}-dot-${index}`}
+                      type="button"
+                      onClick={() => setActiveHeroSlide(index)}
+                      aria-label={`Go to hero slide ${index + 1}`}
+                      className={`h-2.5 rounded-full transition-all ${
+                        index === activeHeroSlide ? 'w-9 bg-slate-950' : 'w-2.5 bg-slate-950/30 hover:bg-slate-950/50'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-sm font-medium text-slate-600">
+                  Sliding {heroSlideDirection === 'upward' ? 'upward' : 'sideways'} every {heroSlideSpeed}s
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div className="w-full max-w-[368px] justify-self-center space-y-4 lg:justify-self-end">

@@ -17,6 +17,11 @@ const TenantSchema = new mongoose.Schema({
       url: String,
       alt: String
     },
+    heroCarousel: {
+      direction: { type: String, default: 'side' },
+      speed: { type: Number, default: 4 },
+      images: [{ url: String, alt: String }]
+    },
     services: [{ title: String, description: String }],
     products: [{ title: String, description: String, price: Number }],
     images: [{ url: String, alt: String }],
