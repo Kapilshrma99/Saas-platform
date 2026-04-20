@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import WebsiteRenderer from '../../components/WebsiteRenderer';
 
 const initialForm = {
   name: '',
@@ -44,6 +45,25 @@ export default function DashboardPage() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const router = useRouter();
+
+  const previewTenant = useMemo(
+    () => ({
+      _id: tenantId || 'draft-preview',
+      websiteCreated,
+      ...form,
+      content: {
+        ...form.content,
+        heroCarousel: {
+          direction: form.content.heroCarousel?.direction === 'upward' ? 'upward' : 'side',
+          speed: Math.min(Math.max(Number(form.content.heroCarousel?.speed) || 4, 1), 15),
+          images: (form.content.heroCarousel?.images || []).filter(image => image.url)
+        },
+        services: form.content.services.filter(service => service.title || service.description),
+        products: form.content.products.filter(product => product.title || product.description)
+      }
+    }),
+    [form, tenantId, websiteCreated]
+  );
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
@@ -418,21 +438,22 @@ export default function DashboardPage() {
 
   return (
     <main className="container py-12">
-      <div className="rounded-3xl border border-slate-200 p-10 shadow-sm">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{websiteCreated ? 'Edit Website' : 'Create Website'}</h1>
-            <p className="mt-2 text-slate-600">
-              You are logged in as {form.owner.email}. {websiteCreated ? 'Update only your own website here.' : 'Complete your website details to publish your site.'}
-            </p>
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+        <div className="rounded-3xl border border-slate-200 p-10 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">{websiteCreated ? 'Edit Website' : 'Create Website'}</h1>
+              <p className="mt-2 text-slate-600">
+                You are logged in as {form.owner.email}. {websiteCreated ? 'Update only your own website here.' : 'Complete your website details to publish your site.'}
+              </p>
+            </div>
+            <button type="button" onClick={handleLogout} className="rounded-full border border-slate-300 px-5 py-2.5 text-sm">
+              Logout
+            </button>
           </div>
-          <button type="button" onClick={handleLogout} className="rounded-full border border-slate-300 px-5 py-2.5 text-sm">
-            Logout
-          </button>
-        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+          <form onSubmit={handleSubmit} className="mt-8 space-y-8">
+            <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <h2 className="text-xl font-semibold">Website Details</h2>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
@@ -494,9 +515,9 @@ export default function DashboardPage() {
                 />
               </label>
             </div>
-          </section>
+            </section>
 
-          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <h2 className="text-xl font-semibold">Website Content</h2>
             <label className="block">
               <span className="text-sm font-medium text-slate-700">Title</span>
@@ -710,9 +731,9 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
-          </section>
+            </section>
 
-          <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+            <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
             <h2 className="text-xl font-semibold">Theme</h2>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
@@ -755,22 +776,53 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
-          </section>
+            </section>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <button type="submit" className="rounded-full bg-primary px-6 py-3 text-white">
-              {websiteCreated ? 'Update Website' : 'Create Website'}
-            </button>
-            {websiteCreated && (
-              <button type="button" onClick={() => router.push(`/site/${form.slug}`)} className="rounded-full border border-slate-300 px-6 py-3">
-                Preview Website
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <button type="submit" className="rounded-full bg-primary px-6 py-3 text-white">
+                {websiteCreated ? 'Update Website' : 'Create Website'}
               </button>
-            )}
-          </div>
+              {websiteCreated && (
+                <button type="button" onClick={() => router.push(`/site/${form.slug}`)} className="rounded-full border border-slate-300 px-6 py-3">
+                  Open Published Website
+                </button>
+              )}
+            </div>
 
-          {status && <p className="text-sm text-green-700">{status}</p>}
-          {error && <p className="text-sm text-red-700">{error}</p>}
-        </form>
+            {status && <p className="text-sm text-green-700">{status}</p>}
+            {error && <p className="text-sm text-red-700">{error}</p>}
+          </form>
+        </div>
+
+        <aside className="xl:sticky xl:top-6 xl:self-start">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Live Preview</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  The owner can see the website here while creating or editing it.
+                </p>
+              </div>
+              {websiteCreated && form.slug ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(`/site/${form.slug}`)}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm"
+                >
+                  Open Page
+                </button>
+              ) : null}
+            </div>
+
+            <div className="max-h-[85vh] overflow-auto bg-slate-100">
+              <div className="min-w-[720px] origin-top-left scale-[0.42] sm:scale-[0.52] lg:scale-[0.6] xl:scale-[0.48] 2xl:scale-[0.58]">
+                <div className="w-[1680px]">
+                  <WebsiteRenderer tenant={previewTenant} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </main>
   );
