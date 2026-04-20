@@ -4,21 +4,18 @@ import { useEffect, useMemo, useState } from 'react';
 import BookingForm from './BookingForm';
 import { applyTheme } from '../services/theme';
 
-const sitePages = [
-  { id: 'home', label: 'Home' },
-  { id: 'about', label: 'About' },
-  { id: 'offerings', label: 'Services' },
-  { id: 'gallery', label: 'Gallery' },
-  { id: 'contact', label: 'Contact' }
-];
-
 const businessPresets = {
   doctor: {
     badge: 'Care Studio',
     offeringLabel: 'Treatments',
     homeTitle: 'Modern care, calm experience, trusted expertise.',
-    homeDescription: 'Create a reassuring digital presence with clear services, specialist highlights, and simple appointment paths.',
+    homeDescription:
+      'Create a reassuring digital presence with clear services, specialist highlights, and simple appointment paths.',
     sectionTone: 'Clean, calm, and confidence-building presentation for patients and families.',
+    audienceTitle: 'What patients value most',
+    audiencePoints: ['Clear treatment information', 'Fast appointment flow', 'Confidence-building presentation'],
+    ctaLabel: 'Book Appointment',
+    spotlightTitle: 'Care that feels considered from first click to first visit.',
     surfaceClass:
       'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,255,255,0.72)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_28%)]',
     accentPanelClass: 'bg-slate-950 text-white',
@@ -28,8 +25,13 @@ const businessPresets = {
     badge: 'Dining House',
     offeringLabel: 'Menu',
     homeTitle: 'Atmosphere, signature dishes, and easy reservations.',
-    homeDescription: 'Turn the website into a digital dining experience with richer presentation, featured menu items, and direct bookings.',
+    homeDescription:
+      'Turn the website into a digital dining experience with richer presentation, featured menu items, and direct bookings.',
     sectionTone: 'Warm, appetizing, and designed to feel like an invitation in.',
+    audienceTitle: 'What guests want quickly',
+    audiencePoints: ['Signature dishes upfront', 'Photos that build appetite', 'A simple reservation path'],
+    ctaLabel: 'Reserve or Enquire',
+    spotlightTitle: 'A digital dining room that makes the first impression count.',
     surfaceClass:
       'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,248,240,0.78)),radial-gradient(circle_at_top_left,rgba(251,146,60,0.20),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.16),transparent_28%)]',
     accentPanelClass: 'bg-[#1f1307] text-white',
@@ -39,8 +41,13 @@ const businessPresets = {
     badge: 'Storefront',
     offeringLabel: 'Products',
     homeTitle: 'A polished storefront designed to help products stand out.',
-    homeDescription: 'Blend visual merchandising, featured items, and a sharper brand voice into one clean customer-facing experience.',
+    homeDescription:
+      'Blend visual merchandising, featured items, and a sharper brand voice into one clean customer-facing experience.',
     sectionTone: 'Confident, product-led, and focused on visual clarity.',
+    audienceTitle: 'What shoppers look for',
+    audiencePoints: ['Fast product scanning', 'Clear pricing', 'Visual confidence from the first fold'],
+    ctaLabel: 'Browse Products',
+    spotlightTitle: 'Merchandising, storytelling, and conversion-ready structure in one place.',
     surfaceClass:
       'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(244,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.16),transparent_28%)]',
     accentPanelClass: 'bg-slate-950 text-white',
@@ -50,8 +57,13 @@ const businessPresets = {
     badge: 'Independent Studio',
     offeringLabel: 'Services',
     homeTitle: 'A personal brand presence with clarity and creative confidence.',
-    homeDescription: 'Showcase your expertise, your process, and your best offers with a website that feels premium and personal.',
+    homeDescription:
+      'Showcase your expertise, your process, and your best offers with a website that feels premium and personal.',
     sectionTone: 'Expressive, sharp, and tailored to solo-brand storytelling.',
+    audienceTitle: 'What clients are assessing',
+    audiencePoints: ['Your point of view', 'Your offers and outcomes', 'How easy it is to start a conversation'],
+    ctaLabel: 'Start a Conversation',
+    spotlightTitle: 'A brand-forward presence built to make expertise feel tangible.',
     surfaceClass:
       'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(250,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.14),transparent_28%)]',
     accentPanelClass: 'bg-slate-950 text-white',
@@ -61,8 +73,13 @@ const businessPresets = {
     badge: 'Brand Website',
     offeringLabel: 'Services',
     homeTitle: 'A stronger digital front door for the business.',
-    homeDescription: 'Present your services, visuals, and contact details with a cleaner and more premium customer experience.',
+    homeDescription:
+      'Present your services, visuals, and contact details with a cleaner and more premium customer experience.',
     sectionTone: 'Balanced, premium, and easy for visitors to navigate.',
+    audienceTitle: 'What visitors need quickly',
+    audiencePoints: ['A clear offer', 'Reasons to trust the business', 'A direct next step'],
+    ctaLabel: 'Get In Touch',
+    spotlightTitle: 'A polished customer-facing experience designed to build momentum.',
     surfaceClass:
       'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(247,249,252,0.78)),radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_28%)]',
     accentPanelClass: 'bg-slate-950 text-white',
@@ -88,9 +105,22 @@ function SectionShell({ kicker, title, description, aside, children }) {
 }
 
 function EmptyState({ message }) {
+  return <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white/70 p-8 text-slate-500">{message}</div>;
+}
+
+function InfoCard({ label, value, href }) {
+  const content = href ? (
+    <a href={href} className="mt-4 inline-flex break-all text-xl font-semibold tracking-tight text-slate-950 transition hover:text-[var(--primary)]">
+      {value}
+    </a>
+  ) : (
+    <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{value}</p>
+  );
+
   return (
-    <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white/70 p-8 text-slate-500">
-      {message}
+    <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{label}</p>
+      {content}
     </div>
   );
 }
@@ -115,6 +145,30 @@ function getOfferings(content, businessType) {
     return content?.products?.filter(product => product.title || product.description) || [];
   }
   return content?.services?.filter(service => service.title || service.description) || [];
+}
+
+function splitStory(description, fallbackName) {
+  const source = (description || `${fallbackName} shares its story, offerings, and contact information here.`).trim();
+  const segments = source
+    .split(/(?<=[.!?])\s+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  if (segments.length > 1) {
+    return segments;
+  }
+
+  return [
+    source,
+    `${fallbackName} uses this space to introduce the brand, explain what it offers, and guide visitors toward the next step.`
+  ];
+}
+
+function formatPrice(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const numericPrice = Number(value);
+  if (Number.isNaN(numericPrice)) return null;
+  return `$${numericPrice}`;
 }
 
 export default function WebsiteRenderer({ tenant }) {
@@ -150,17 +204,35 @@ export default function WebsiteRenderer({ tenant }) {
   const heroSlideSpeed = Math.min(Math.max(Number(heroCarousel.speed) || 4, 1), 15);
   const heroSlides = (heroCarousel.images || []).filter(image => image?.url);
   const fallbackHeroSlides = heroImage.url
-    ? [{ url: heroImage.url, alt: heroImage.alt || `${tenant.name || 'Business'} hero image` }]
+    ? [{ url: heroImage.url, alt: heroImage.alt || `${tenant?.name || 'Business'} hero image` }]
     : images[0]?.url
-      ? [{ url: images[0].url, alt: images[0].alt || `${tenant.name || 'Business'} hero image` }]
+      ? [{ url: images[0].url, alt: images[0].alt || `${tenant?.name || 'Business'} hero image` }]
       : [];
   const resolvedHeroSlides = heroSlides.length > 0 ? heroSlides : fallbackHeroSlides;
   const hasHeroBackground = resolvedHeroSlides.length > 0;
   const offeringLabel = preset.offeringLabel;
   const heroTitle = content.title || preset.homeTitle;
-  const aboutText =
-    content.description || `${tenant?.name || 'This business'} shares its story, offerings, and contact information here.`;
+  const aboutParagraphs = splitStory(content.description, tenant?.name || 'This business');
   const showBookingForm = tenant?.businessType !== 'shopping';
+  const featuredOfferings = offerings.slice(0, 4);
+  const featuredImages = images.slice(0, 5);
+  const storyHighlights = [
+    {
+      label: 'Positioning',
+      value: preset.badge,
+      detail: preset.sectionTone
+    },
+    {
+      label: 'Focus',
+      value: `${offerings.length || 0} ${offeringLabel.toLowerCase()}`,
+      detail: `${tenant?.name || 'This business'} keeps the key offer clear and easy to scan.`
+    },
+    {
+      label: 'Next Step',
+      value: showBookingForm ? preset.ctaLabel : 'Reach Out',
+      detail: showBookingForm ? 'Visitors can move directly from discovery to enquiry.' : 'Visitors are guided toward products and contact details.'
+    }
+  ];
 
   const stats = useMemo(
     () => [
@@ -171,10 +243,45 @@ export default function WebsiteRenderer({ tenant }) {
     [businessTypeLabel, offeringLabel, offerings.length, images.length]
   );
 
+  const navPages = useMemo(
+    () => [
+      { id: 'home', label: 'Home' },
+      { id: 'about', label: 'About' },
+      { id: 'offerings', label: offeringLabel },
+      { id: 'gallery', label: 'Gallery' },
+      { id: 'contact', label: 'Contact' }
+    ],
+    [offeringLabel]
+  );
+
   const heroNotes = [
-    `${preset.badge}`,
+    preset.badge,
     `${offerings.length || 0} curated ${offeringLabel.toLowerCase()}`,
     contactInfo.email || contactInfo.phone || 'Direct contact ready'
+  ];
+
+  const quickActions = [
+    { label: offeringLabel, page: 'offerings' },
+    { label: 'Gallery', page: 'gallery' },
+    { label: 'Contact', page: 'contact' }
+  ];
+
+  const contactCards = [
+    {
+      label: 'Phone',
+      value: contactInfo.phone || 'Not provided',
+      href: contactInfo.phone ? `tel:${contactInfo.phone}` : null
+    },
+    {
+      label: 'Email',
+      value: contactInfo.email || 'Not provided',
+      href: contactInfo.email ? `mailto:${contactInfo.email}` : null
+    },
+    {
+      label: 'Address',
+      value: contactInfo.address || 'Not provided',
+      href: null
+    }
   ];
 
   useEffect(() => {
@@ -207,6 +314,88 @@ export default function WebsiteRenderer({ tenant }) {
     );
   }
 
+  const renderFeaturedOfferings = () =>
+    featuredOfferings.length > 0 ? (
+      <SectionShell
+        kicker="Highlights"
+        title={`Featured ${offeringLabel}`}
+        description="The most important entries are surfaced with a cleaner, more editorial presentation."
+        aside={
+          <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Selection</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              A focused preview of what visitors should notice first when they land on the site.
+            </p>
+          </div>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          {featuredOfferings.map((item, index) => {
+            const price = formatPrice(item.price);
+            return (
+              <article
+                key={`${item.title || 'item'}-${index}`}
+                className="group rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">0{index + 1}</p>
+                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
+                  </div>
+                  {price ? (
+                    <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
+                  ) : null}
+                </div>
+                <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
+                <div className="mt-6 flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-slate-500">Presented as a featured offer</span>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage('contact')}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    Ask About This
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </SectionShell>
+    ) : null;
+
+  const renderVisualSpotlight = () =>
+    featuredImages.length > 0 ? (
+      <SectionShell
+        kicker="Showcase"
+        title="Visual Spotlight"
+        description="A more branded image presentation helps the website feel active, current, and premium."
+        aside={
+          <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Spotlight</p>
+            <p className="mt-3 text-sm leading-7 text-white/72">{preset.spotlightTitle}</p>
+          </div>
+        }
+      >
+        <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+            <img
+              src={featuredImages[0].url}
+              alt={featuredImages[0].alt || `${tenant.name || 'Business'} featured visual`}
+              className="h-[360px] w-full object-cover"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            {featuredImages.slice(1, 5).map((image, index) => (
+              <div key={`${image.url}-${index}`} className="overflow-hidden rounded-[1.7rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+                <img src={image.url} alt={image.alt || `Gallery image ${index + 2}`} className="h-40 w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </SectionShell>
+    ) : null;
+
   const renderHomePage = () => (
     <div className="space-y-8">
       <section
@@ -218,17 +407,11 @@ export default function WebsiteRenderer({ tenant }) {
           <>
             <div className="absolute inset-0 overflow-hidden">
               <div
-                className={`h-full w-full transition-transform duration-700 ease-out ${
-                  heroSlideDirection === 'upward' ? 'flex flex-col' : 'flex'
-                }`}
+                className={`h-full w-full transition-transform duration-700 ease-out ${heroSlideDirection === 'upward' ? 'flex flex-col' : 'flex'}`}
                 style={
                   heroSlideDirection === 'upward'
-                    ? {
-                        transform: `translateY(-${activeHeroSlide * 100}%)`
-                      }
-                    : {
-                        transform: `translateX(-${activeHeroSlide * 100}%)`
-                      }
+                    ? { transform: `translateY(-${activeHeroSlide * 100}%)` }
+                    : { transform: `translateX(-${activeHeroSlide * 100}%)` }
                 }
               >
                 {resolvedHeroSlides.map((image, index) => (
@@ -249,6 +432,7 @@ export default function WebsiteRenderer({ tenant }) {
             <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(255,255,255,0.42)_42%,rgba(15,23,42,0.36))]" />
           </>
         ) : null}
+
         <div className="absolute left-0 top-20 h-48 w-48 rounded-full bg-[var(--primary)]/10 blur-3xl" />
         <div className="absolute bottom-[-3rem] right-[-2rem] h-56 w-56 rounded-full bg-[var(--secondary)]/15 blur-3xl" />
 
@@ -259,22 +443,16 @@ export default function WebsiteRenderer({ tenant }) {
               : 'lg:grid-cols-[minmax(0,1.3fr)_22rem] xl:grid-cols-[minmax(0,1.4fr)_23rem]'
           }`}
         >
-          <div className="max-w-[820px] space-y-8">
+          <div className="max-w-[860px] space-y-8">
             <div className="inline-flex items-center gap-3 rounded-full border border-white/80 bg-white/85 px-4 py-2 text-sm text-slate-600 shadow-sm">
               <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_6px_rgba(255,255,255,0.65)]" />
               {preset.badge} for {tenant.name || 'your business'}
             </div>
 
             <div className="space-y-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[var(--primary)]">
-                {businessTypeLabel}
-              </p>
-              <h1 className="max-w-[13ch] text-5xl font-black tracking-[-0.06em] text-slate-950 sm:text-6xl xl:text-7xl">
-                {heroTitle}
-              </h1>
-              <p className="max-w-[62ch] text-lg leading-8 text-slate-600 sm:text-xl">
-                {content.description || preset.homeDescription}
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[var(--primary)]">{businessTypeLabel}</p>
+              <h1 className="max-w-[13ch] text-5xl font-black tracking-[-0.06em] text-slate-950 sm:text-6xl xl:text-7xl">{heroTitle}</h1>
+              <p className="max-w-[62ch] text-lg leading-8 text-slate-600 sm:text-xl">{content.description || preset.homeDescription}</p>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -283,14 +461,14 @@ export default function WebsiteRenderer({ tenant }) {
                 onClick={() => setActivePage('offerings')}
                 className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-900"
               >
-                Explore {offeringLabel}
+                {preset.ctaLabel}
               </button>
               <button
                 type="button"
-                onClick={() => setActivePage('contact')}
+                onClick={() => setActivePage('gallery')}
                 className="rounded-full border border-slate-200 bg-white/88 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
               >
-                Get In Touch
+                See Visuals
               </button>
             </div>
 
@@ -298,6 +476,14 @@ export default function WebsiteRenderer({ tenant }) {
               {heroNotes.map(note => (
                 <div key={note} className="rounded-[1.4rem] border border-white/80 bg-white/72 px-4 py-4 text-sm text-slate-600 shadow-sm">
                   {note}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {preset.audiencePoints.map(point => (
+                <div key={point} className="rounded-[1.35rem] border border-white/70 bg-white/65 px-4 py-4 text-sm font-medium text-slate-700 shadow-sm">
+                  {point}
                 </div>
               ))}
             </div>
@@ -346,60 +532,49 @@ export default function WebsiteRenderer({ tenant }) {
             </div>
 
             <div className={`rounded-[2rem] border border-white/80 p-6 shadow-sm ${preset.mutedPanelClass}`}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">Creative Direction</p>
-              <p className="mt-4 text-sm leading-7 text-slate-600">{preset.sectionTone}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">{preset.audienceTitle}</p>
+              <div className="mt-4 space-y-3">
+                {quickActions.map(action => (
+                  <button
+                    key={action.page}
+                    type="button"
+                    onClick={() => setActivePage(action.page)}
+                    className="flex w-full items-center justify-between rounded-[1.2rem] border border-slate-200/80 bg-white/80 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                  >
+                    <span>{action.label}</span>
+                    <span className="text-slate-400">Open</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {offerings.length > 0 ? (
-        <SectionShell
-          kicker="Highlights"
-          title={`Featured ${offeringLabel}`}
-          description="The most important entries are surfaced with a cleaner, more editorial presentation."
-          aside={
-            <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Selection</p>
-              <p className="mt-3 text-sm leading-7 text-slate-600">
-                A focused preview of what visitors should notice first when they land on the site.
-              </p>
+      <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+        <div className={`rounded-[2.2rem] border border-white/70 p-7 shadow-sm ${preset.mutedPanelClass}`}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">Brand Direction</p>
+          <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-slate-950">{preset.spotlightTitle}</h2>
+          <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">{preset.sectionTone}</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {storyHighlights.map(item => (
+            <div key={item.label} className="rounded-[1.8rem] border border-white/70 bg-white/76 p-6 shadow-sm backdrop-blur">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
+              <p className="mt-4 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{item.detail}</p>
             </div>
-          }
-        >
-          <div className="grid gap-4 lg:grid-cols-2">
-            {offerings.slice(0, 4).map((item, index) => (
-              <article
-                key={`${item.title || 'item'}-${index}`}
-                className="group rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">0{index + 1}</p>
-                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-                      {item.title || `${offeringLabel} ${index + 1}`}
-                    </h3>
-                  </div>
-                  {'price' in item && item.price !== undefined ? (
-                    <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">
-                      ${item.price || 0}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-4 text-base leading-7 text-slate-600">
-                  {item.description || 'More details coming soon.'}
-                </p>
-                <div className="mt-6 h-px bg-gradient-to-r from-[var(--primary)]/35 to-transparent opacity-0 transition group-hover:opacity-100" />
-              </article>
-            ))}
-          </div>
-        </SectionShell>
-      ) : null}
+          ))}
+        </div>
+      </section>
+
+      {renderFeaturedOfferings()}
+      {renderVisualSpotlight()}
 
       {showBookingForm ? (
         <SectionShell
           kicker="Connect"
-          title={tenant.businessType === 'doctor' ? 'Book Appointment' : tenant.businessType === 'restaurant' ? 'Reserve or Enquire' : 'Book or Enquire'}
+          title={preset.ctaLabel}
           description="Turn the website into an active channel for leads, bookings, and direct conversations."
           aside={
             <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
@@ -420,7 +595,7 @@ export default function WebsiteRenderer({ tenant }) {
     <SectionShell
       kicker="Story"
       title={`About ${tenant.name || 'Us'}`}
-      description="A more refined, brand-led section for the owner’s message and business identity."
+      description="A more refined, brand-led section for the owner's message and business identity."
       aside={
         <div className={`rounded-[1.75rem] p-6 shadow-xl ${preset.accentPanelClass}`}>
           <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Identity</p>
@@ -437,15 +612,28 @@ export default function WebsiteRenderer({ tenant }) {
         </div>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/80 p-7 shadow-sm">
-          <p className="text-lg leading-9 text-slate-600">{aboutText}</p>
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-4">
+          {aboutParagraphs.map((paragraph, index) => (
+            <div key={`${paragraph}-${index}`} className="rounded-[1.9rem] border border-slate-200/80 bg-white/80 p-7 shadow-sm">
+              <p className="text-lg leading-9 text-slate-600">{paragraph}</p>
+            </div>
+          ))}
         </div>
-        <div className={`rounded-[1.9rem] border border-slate-200/80 p-7 shadow-sm ${preset.mutedPanelClass}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Brand Perspective</p>
-          <p className="mt-4 text-base leading-8 text-slate-600">
-            This page gives the website a stronger narrative center, helping visitors understand the personality behind the business.
-          </p>
+        <div className="space-y-4">
+          <div className={`rounded-[1.9rem] border border-slate-200/80 p-7 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Brand Perspective</p>
+            <p className="mt-4 text-base leading-8 text-slate-600">
+              This page gives the website a stronger narrative center, helping visitors understand the personality behind the business.
+            </p>
+          </div>
+          {storyHighlights.map(item => (
+            <div key={item.label} className="rounded-[1.75rem] border border-slate-200/80 bg-white/86 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
+              <p className="mt-3 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">{item.detail}</p>
+            </div>
+          ))}
         </div>
       </div>
     </SectionShell>
@@ -459,37 +647,49 @@ export default function WebsiteRenderer({ tenant }) {
       aside={
         <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Collection</p>
-          <p className="mt-3 text-sm leading-7 text-slate-600">
-            A complete overview for visitors who want to go beyond the homepage preview.
-          </p>
+          <p className="mt-3 text-sm leading-7 text-slate-600">A complete overview for visitors who want to go beyond the homepage preview.</p>
         </div>
       }
     >
       {offerings.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
-          {offerings.map((item, index) => (
-            <article
-              key={`${item.title || 'item'}-${index}`}
-              className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Item {index + 1}</p>
-                  <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-                    {item.title || `${offeringLabel} ${index + 1}`}
-                  </h3>
-                </div>
-                {'price' in item && item.price !== undefined ? (
-                  <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">
-                    ${item.price || 0}
-                  </span>
+          {offerings.map((item, index) => {
+            const price = formatPrice(item.price);
+            const image = images[index % Math.max(images.length, 1)];
+
+            return (
+              <article
+                key={`${item.title || 'item'}-${index}`}
+                className="overflow-hidden rounded-[1.9rem] border border-slate-200/80 bg-white/86 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+              >
+                {image?.url ? (
+                  <img src={image.url} alt={image.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
                 ) : null}
-              </div>
-              <p className="mt-4 text-base leading-7 text-slate-600">
-                {item.description || 'More details coming soon.'}
-              </p>
-            </article>
-          ))}
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Item {index + 1}</p>
+                      <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
+                    </div>
+                    {price ? (
+                      <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
+                    ) : null}
+                  </div>
+                  <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
+                  <div className="mt-6 flex items-center justify-between gap-4">
+                    <span className="text-sm text-slate-500">Part of the main collection</span>
+                    <button
+                      type="button"
+                      onClick={() => setActivePage('contact')}
+                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Contact
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       ) : (
         <EmptyState message={`No ${offeringLabel.toLowerCase()} added yet.`} />
@@ -505,33 +705,36 @@ export default function WebsiteRenderer({ tenant }) {
       aside={
         <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
           <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Visual Tone</p>
-          <p className="mt-3 text-sm leading-7 text-white/72">
-            Richer spacing and larger image surfaces help the business look more premium at a glance.
-          </p>
+          <p className="mt-3 text-sm leading-7 text-white/72">Richer spacing and larger image surfaces help the business look more premium at a glance.</p>
         </div>
       }
     >
       {images.length > 0 ? (
-        <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {images.map((image, index) => {
-            const tallCard = index % 3 === 0;
-            return (
-              <div
-                key={`${image.url}-${index}`}
-                className={`group overflow-hidden rounded-[1.9rem] border border-slate-200/75 bg-slate-100 shadow-sm ${
-                  tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
-                }`}
-              >
-                <img
-                  src={image.url}
-                  alt={image.alt || `Image ${index + 1}`}
-                  className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
-                    tallCard ? 'h-full min-h-[460px]' : 'h-[220px]'
+        <div className="space-y-5">
+          <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+            <img src={images[0].url} alt={images[0].alt || 'Featured gallery image'} className="h-[420px] w-full object-cover" />
+          </div>
+          <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {images.slice(1).map((image, index) => {
+              const tallCard = index % 3 === 1;
+              return (
+                <div
+                  key={`${image.url}-${index}`}
+                  className={`group overflow-hidden rounded-[1.9rem] border border-slate-200/75 bg-slate-100 shadow-sm ${
+                    tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
                   }`}
-                />
-              </div>
-            );
-          })}
+                >
+                  <img
+                    src={image.url}
+                    alt={image.alt || `Image ${index + 2}`}
+                    className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
+                      tallCard ? 'h-full min-h-[460px]' : 'h-[220px]'
+                    }`}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <EmptyState message="No gallery images available right now." />
@@ -540,34 +743,63 @@ export default function WebsiteRenderer({ tenant }) {
   );
 
   const renderContactPage = () => (
-    <SectionShell
-      kicker="Reach Out"
-      title="Contact"
-      description="A direct, user-facing contact section that feels part of the design system rather than an afterthought."
-      aside={
-        <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Response Paths</p>
-          <p className="mt-3 text-sm leading-7 text-slate-600">
-            Surface the quickest ways for customers to start a conversation.
-          </p>
+    <div className="space-y-8">
+      <SectionShell
+        kicker="Reach Out"
+        title="Contact"
+        description="A direct, user-facing contact section that feels part of the design system rather than an afterthought."
+        aside={
+          <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Response Paths</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">Surface the quickest ways for customers to start a conversation.</p>
+          </div>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          {contactCards.map(card => (
+            <InfoCard key={card.label} label={card.label} value={card.value} href={card.href} />
+          ))}
         </div>
-      }
-    >
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Phone</p>
-          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.phone || 'Not provided'}</p>
+      </SectionShell>
+
+      <section className={`rounded-[2.25rem] border border-white/70 p-8 shadow-[0_24px_60px_rgba(15,23,42,0.10)] ${preset.accentPanelClass}`}>
+        <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-center">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.38em] text-white/55">Next Step</p>
+            <h2 className="mt-4 text-4xl font-black tracking-[-0.05em]">{tenant.name || 'This business'} is ready for the next conversation.</h2>
+            <p className="mt-4 max-w-2xl text-base leading-8 text-white/72">
+              Whether visitors are comparing services, browsing products, or deciding when to reach out, this section gives them a clear path forward.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setActivePage('offerings')}
+              className="w-full rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+            >
+              Review {offeringLabel}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePage('gallery')}
+              className="w-full rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+            >
+              View Gallery
+            </button>
+          </div>
         </div>
-        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Email</p>
-          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.email || 'Not provided'}</p>
-        </div>
-        <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Address</p>
-          <p className="mt-4 text-xl font-semibold tracking-tight text-slate-950">{contactInfo.address || 'Not provided'}</p>
-        </div>
-      </div>
-    </SectionShell>
+      </section>
+
+      {showBookingForm ? (
+        <SectionShell
+          kicker="Booking"
+          title={preset.ctaLabel}
+          description="Let the contact experience end in action, not confusion."
+        >
+          <BookingForm tenant={tenant} />
+        </SectionShell>
+      ) : null}
+    </div>
   );
 
   const pageContent = {
@@ -579,7 +811,10 @@ export default function WebsiteRenderer({ tenant }) {
   };
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)] text-slate-900">
+    <main
+      className="min-h-screen bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)] text-slate-900"
+      style={{ fontFamily: 'var(--font-family, Inter, sans-serif)' }}
+    >
       <div className="relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(250,204,21,0.12),transparent_26%),radial-gradient(circle_at_70%_50%,rgba(16,185,129,0.10),transparent_24%)]" />
 
@@ -591,9 +826,7 @@ export default function WebsiteRenderer({ tenant }) {
                   {getInitials(tenant.name)}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-black tracking-[-0.04em] text-slate-950">
-                    {tenant.name || 'Business Website'}
-                  </p>
+                  <p className="truncate text-lg font-black tracking-[-0.04em] text-slate-950">{tenant.name || 'Business Website'}</p>
                   <p className="truncate text-sm capitalize text-slate-500">{businessTypeLabel}</p>
                 </div>
               </div>
@@ -604,7 +837,7 @@ export default function WebsiteRenderer({ tenant }) {
                 aria-label="Toggle navigation menu"
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white/88 text-slate-700 transition hover:bg-white"
               >
-                <span className="text-lg leading-none">{isNavOpen ? '×' : '☰'}</span>
+                <span className="text-lg leading-none">{isNavOpen ? 'X' : '='}</span>
               </button>
             </div>
 
@@ -620,7 +853,7 @@ export default function WebsiteRenderer({ tenant }) {
               </div>
 
               <div className="flex flex-wrap justify-center gap-2">
-                {sitePages.map(page => {
+                {navPages.map(page => {
                   const isActive = page.id === activePage;
                   return (
                     <button
@@ -628,9 +861,7 @@ export default function WebsiteRenderer({ tenant }) {
                       type="button"
                       onClick={() => setActivePage(page.id)}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        isActive
-                          ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]'
-                          : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                        isActive ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]' : 'bg-white/82 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       {page.label}
@@ -651,7 +882,7 @@ export default function WebsiteRenderer({ tenant }) {
             <div className={`overflow-hidden transition-[max-height,opacity,margin] duration-300 xl:hidden ${isNavOpen ? 'mt-4 max-h-[32rem] opacity-100' : 'max-h-0 opacity-0'}`}>
               <div className="space-y-4 border-t border-white/70 pt-4">
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {sitePages.map(page => {
+                  {navPages.map(page => {
                     const isActive = page.id === activePage;
                     return (
                       <button
@@ -659,9 +890,7 @@ export default function WebsiteRenderer({ tenant }) {
                         type="button"
                         onClick={() => setActivePage(page.id)}
                         className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                          isActive
-                            ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]'
-                            : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                          isActive ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]' : 'bg-white/82 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         {page.label}
@@ -693,22 +922,18 @@ export default function WebsiteRenderer({ tenant }) {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
-                    {businessTypeLabel}
-                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">{businessTypeLabel}</div>
                   <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
                     {offerings.length} {offeringLabel.toLowerCase()}
                   </div>
-                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">
-                    {images.length} gallery items
-                  </div>
+                  <div className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-sm text-slate-600">{images.length} gallery items</div>
                 </div>
               </div>
 
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Navigation</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {sitePages.map(page => (
+                  {navPages.map(page => (
                     <button
                       key={page.id}
                       type="button"
