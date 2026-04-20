@@ -22,7 +22,16 @@ const TenantSchema = new mongoose.Schema({
       speed: { type: Number, default: 4 },
       images: [{ url: String, alt: String }]
     },
-    services: [{ title: String, description: String }],
+    services: [
+      {
+        title: String,
+        description: String,
+        image: {
+          url: String,
+          alt: String
+        }
+      }
+    ],
     products: [{ title: String, description: String, price: Number }],
     images: [{ url: String, alt: String }],
     contactInfo: {

@@ -23,7 +23,7 @@ const initialForm = {
       speed: 4,
       images: []
     },
-    services: [{ title: '', description: '' }],
+    services: [{ title: '', description: '', image: { url: '', alt: '' } }],
     products: [{ title: '', description: '', price: 0 }],
     images: [],
     contactInfo: { phone: '', email: '', address: '' }
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           speed: Math.min(Math.max(Number(form.content.heroCarousel?.speed) || 4, 1), 15),
           images: (form.content.heroCarousel?.images || []).filter(image => image.url)
         },
-        services: form.content.services.filter(service => service.title || service.description),
+        services: form.content.services.filter(service => service.title || service.description || service.image?.url),
         products: form.content.products.filter(product => product.title || product.description)
       }
     }),
@@ -124,7 +124,16 @@ export default function DashboardPage() {
           speed: tenant.content?.heroCarousel?.speed || 4,
           images: tenant.content?.heroCarousel?.images || []
         },
-        services: tenant.content?.services?.length ? tenant.content.services : [{ title: '', description: '' }],
+        services: tenant.content?.services?.length
+          ? tenant.content.services.map(service => ({
+              title: service.title || '',
+              description: service.description || '',
+              image: {
+                url: service.image?.url || '',
+                alt: service.image?.alt || ''
+              }
+            }))
+          : [{ title: '', description: '', image: { url: '', alt: '' } }],
         products: tenant.content?.products?.length ? tenant.content.products : [{ title: '', description: '', price: 0 }],
         images: tenant.content?.images || [],
         contactInfo: tenant.content?.contactInfo || { phone: '', email: '', address: '' }
@@ -228,16 +237,32 @@ export default function DashboardPage() {
     setForm(prev => ({ ...prev, content: { ...prev.content, services } }));
   };
 
+  const handleServiceImageChange = (index, key, value) => {
+    const services = [...form.content.services];
+    services[index] = {
+      ...services[index],
+      image: {
+        url: services[index]?.image?.url || '',
+        alt: services[index]?.image?.alt || '',
+        [key]: value
+      }
+    };
+    setForm(prev => ({ ...prev, content: { ...prev.content, services } }));
+  };
+
   const addService = () => {
     setForm(prev => ({
       ...prev,
-      content: { ...prev.content, services: [...prev.content.services, { title: '', description: '' }] }
+      content: { ...prev.content, services: [...prev.content.services, { title: '', description: '', image: { url: '', alt: '' } }] }
     }));
   };
 
   const removeService = index => {
     const services = form.content.services.filter((_, idx) => idx !== index);
-    setForm(prev => ({ ...prev, content: { ...prev.content, services: services.length ? services : [{ title: '', description: '' }] } }));
+    setForm(prev => ({
+      ...prev,
+      content: { ...prev.content, services: services.length ? services : [{ title: '', description: '', image: { url: '', alt: '' } }] }
+    }));
   };
 
   const uploadImage = async file => {
@@ -349,6 +374,46 @@ export default function DashboardPage() {
     }
   };
 
+  const handleServiceImageUpload = async (index, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!authToken) {
+      setError('Please log in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading service image...');
+      const url = await uploadImage(file);
+      setForm(prev => {
+        const services = [...prev.content.services];
+        services[index] = {
+          ...services[index],
+          image: {
+            url,
+            alt: services[index]?.image?.alt || file.name
+          }
+        };
+
+        return {
+          ...prev,
+          content: {
+            ...prev.content,
+            services
+          }
+        };
+      });
+      setStatus('Service image uploaded successfully. Save your website to publish it.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setError(null);
@@ -373,7 +438,7 @@ export default function DashboardPage() {
           speed: Math.min(Math.max(Number(form.content.heroCarousel?.speed) || 4, 1), 15),
           images: (form.content.heroCarousel?.images || []).filter(image => image.url)
         },
-        services: form.content.services.filter(service => service.title || service.description),
+        services: form.content.services.filter(service => service.title || service.description || service.image?.url),
         products: form.content.products.filter(product => product.title || product.description)
       }
     };
@@ -692,6 +757,34 @@ export default function DashboardPage() {
                         className="rounded-xl border border-slate-300 px-4 py-3"
                         placeholder="Service description"
                       />
+                    </div>
+                    <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div>
+                        <p className="text-sm font-medium text-slate-700">Service Image (optional)</p>
+                        <p className="mt-1 text-sm text-slate-500">Add an image only if you want this service card to show one.</p>
+                      </div>
+                      <input type="file" accept="image/*" onChange={e => handleServiceImageUpload(index, e)} />
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input
+                          value={service.image?.url || ''}
+                          onChange={e => handleServiceImageChange(index, 'url', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3"
+                          placeholder="Service image URL"
+                        />
+                        <input
+                          value={service.image?.alt || ''}
+                          onChange={e => handleServiceImageChange(index, 'alt', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3"
+                          placeholder="Service image alt text"
+                        />
+                      </div>
+                      {service.image?.url ? (
+                        <img
+                          src={service.image.url}
+                          alt={service.image.alt || `Service ${index + 1}`}
+                          className="h-44 w-full rounded-2xl object-cover"
+                        />
+                      ) : null}
                     </div>
                     <button type="button" onClick={() => removeService(index)} className="mt-3 text-sm text-red-700">
                       Remove

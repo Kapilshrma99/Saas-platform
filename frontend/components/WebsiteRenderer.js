@@ -144,7 +144,7 @@ function getOfferings(content, businessType) {
   if (businessType === 'shopping') {
     return content?.products?.filter(product => product.title || product.description) || [];
   }
-  return content?.services?.filter(service => service.title || service.description) || [];
+  return content?.services?.filter(service => service.title || service.description || service.image?.url) || [];
 }
 
 function splitStory(description, fallbackName) {
@@ -332,30 +332,36 @@ export default function WebsiteRenderer({ tenant }) {
         <div className="grid gap-4 lg:grid-cols-2">
           {featuredOfferings.map((item, index) => {
             const price = formatPrice(item.price);
+            const cardImage = item.image?.url;
             return (
               <article
                 key={`${item.title || 'item'}-${index}`}
-                className="group rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+                className="group overflow-hidden rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">0{index + 1}</p>
-                    <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
+                {cardImage ? (
+                  <img src={cardImage} alt={item.image?.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
+                ) : null}
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">0{index + 1}</p>
+                      <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
+                    </div>
+                    {price ? (
+                      <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
+                    ) : null}
                   </div>
-                  {price ? (
-                    <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
-                  ) : null}
-                </div>
-                <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
-                <div className="mt-6 flex items-center justify-between gap-4">
-                  <span className="text-sm font-medium text-slate-500">Presented as a featured offer</span>
-                  <button
-                    type="button"
-                    onClick={() => setActivePage('contact')}
-                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    Ask About This
-                  </button>
+                  <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
+                  <div className="mt-6 flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-slate-500">Presented as a featured offer</span>
+                    <button
+                      type="button"
+                      onClick={() => setActivePage('contact')}
+                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Ask About This
+                    </button>
+                  </div>
                 </div>
               </article>
             );
@@ -655,7 +661,7 @@ export default function WebsiteRenderer({ tenant }) {
         <div className="grid gap-4 md:grid-cols-2">
           {offerings.map((item, index) => {
             const price = formatPrice(item.price);
-            const image = images[index % Math.max(images.length, 1)];
+            const image = item.image?.url ? item.image : images[index % Math.max(images.length, 1)];
 
             return (
               <article
