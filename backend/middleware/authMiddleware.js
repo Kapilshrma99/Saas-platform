@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
+const { verifyAuthToken } = require('../utils/auth');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -7,7 +7,7 @@ const authMiddleware = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = verifyAuthToken(token);
     const tenant = await Tenant.findById(decoded.id);
     if (!tenant) {
       return res.status(401).json({ error: 'Invalid token' });

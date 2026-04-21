@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Tenant = require('../models/Tenant');
+const { getJwtSecret } = require('../utils/auth');
 
 const sanitizeTenant = tenant => {
   if (!tenant) return tenant;
@@ -14,7 +15,7 @@ const sanitizeTenant = tenant => {
 const createToken = tenant => {
   return jwt.sign(
     { id: tenant._id, email: tenant.owner.email },
-    process.env.JWT_SECRET || 'secret',
+    getJwtSecret(),
     { expiresIn: '7d' }
   );
 };
