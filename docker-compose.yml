@@ -39,6 +39,12 @@ services:
       - RAZORPAY_KEY_ID=rzp_test_SYat0VXxF2Fun
       - RAZORPAY_KEY_SECRET=1diPUky62zPTsuGLDupN4ppu
       - BASE_DOMAIN=yourapp.com
+      - MAIL_HOST=smtp
+      - MAIL_PORT=587
+      - MAIL_SECURE=false
+      - MAIL_USER=
+      - MAIL_PASS=
+      - MAIL_FROM=
     depends_on:
       - mongodb
       - redis
