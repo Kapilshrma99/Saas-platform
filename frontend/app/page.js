@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import dashImage from './dash.jpg';
 
 export default function HomePage() {
   return (
@@ -40,17 +41,19 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mt-16 lg:mt-0 lg:w-1/2 lg:pl-12">
-              <div className="relative">
-                <div className="animate-float overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-indigo-100">
-                  <img 
-                    src="/dashboard-hero.png" 
-                    alt="Platform Dashboard" 
-                    className="rounded-xl w-full h-auto"
+            <div className="mt-16 w-full lg:mt-0 lg:w-1/2 lg:pl-12">
+              <div className="relative mx-auto w-full max-w-2xl">
+                <div className="animate-float relative z-10 overflow-hidden rounded-2xl  sm:p-3">
+                  <Image
+                    src={dashImage}
+                    alt="Platform Dashboard"
+                    className="block max-h-[320px] w-full rounded-xl object-contain md:max-h-[380px] lg:max-h-[420px]"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
                   />
                 </div>
                 {/* Decorative element */}
-                <div className="absolute -bottom-6 -right-6 h-24 w-24 rounded-2xl bg-indigo-600 shadow-xl sm:h-32 sm:w-32" />
+                <div className="absolute -bottom-4 -right-4 h-20 w-20 rounded-2xl bg-indigo-600 shadow-xl sm:-bottom-6 sm:-right-6 sm:h-32 sm:w-32" />
               </div>
             </div>
           </div>
