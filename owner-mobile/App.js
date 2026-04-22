@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = 'http://192.168.0.248:5000';
+const API_BASE_URL = 'http://192.168.0.249:5000';
 const TOKEN_KEY = 'ownerAuthToken';
 
 const formatDate = value => {
