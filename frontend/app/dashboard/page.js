@@ -24,7 +24,7 @@ const initialForm = {
       images: []
     },
     services: [{ title: '', description: '', image: { url: '', alt: '' } }],
-    products: [{ title: '', description: '', price: 0 }],
+    products: [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
     images: [],
     contactInfo: { phone: '', email: '', address: '' }
   },
@@ -45,6 +45,12 @@ export default function DashboardPage() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const router = useRouter();
+  const isRestaurant = form.businessType === 'restaurant';
+  const isShopping = form.businessType === 'shopping';
+  const productSectionTitle = isRestaurant ? 'Menu Items' : 'Products';
+  const productSectionDescription = isRestaurant
+    ? 'Create the dishes customers can browse and order from your restaurant website.'
+    : 'Create the catalog items you want shoppers to see on your website.';
 
   const previewTenant = useMemo(
     () => ({
@@ -59,7 +65,9 @@ export default function DashboardPage() {
           images: (form.content.heroCarousel?.images || []).filter(image => image.url)
         },
         services: form.content.services.filter(service => service.title || service.description || service.image?.url),
-        products: form.content.products.filter(product => product.title || product.description)
+        products: form.content.products.filter(
+          product => product.title || product.description || product.category || product.image?.url
+        )
       }
     }),
     [form, tenantId, websiteCreated]
@@ -134,7 +142,18 @@ export default function DashboardPage() {
               }
             }))
           : [{ title: '', description: '', image: { url: '', alt: '' } }],
-        products: tenant.content?.products?.length ? tenant.content.products : [{ title: '', description: '', price: 0 }],
+        products: tenant.content?.products?.length
+          ? tenant.content.products.map(product => ({
+              title: product.title || '',
+              description: product.description || '',
+              price: product.price || 0,
+              category: product.category || '',
+              image: {
+                url: product.image?.url || '',
+                alt: product.image?.alt || ''
+              }
+            }))
+          : [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
         images: tenant.content?.images || [],
         contactInfo: tenant.content?.contactInfo || { phone: '', email: '', address: '' }
       },
@@ -262,6 +281,49 @@ export default function DashboardPage() {
     setForm(prev => ({
       ...prev,
       content: { ...prev.content, services: services.length ? services : [{ title: '', description: '', image: { url: '', alt: '' } }] }
+    }));
+  };
+
+  const handleProductChange = (index, key, value) => {
+    const products = [...form.content.products];
+    products[index] = { ...products[index], [key]: value };
+    setForm(prev => ({ ...prev, content: { ...prev.content, products } }));
+  };
+
+  const handleProductImageChange = (index, key, value) => {
+    const products = [...form.content.products];
+    products[index] = {
+      ...products[index],
+      image: {
+        url: products[index]?.image?.url || '',
+        alt: products[index]?.image?.alt || '',
+        [key]: value
+      }
+    };
+    setForm(prev => ({ ...prev, content: { ...prev.content, products } }));
+  };
+
+  const addProduct = () => {
+    setForm(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        products: [
+          ...prev.content.products,
+          { title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }
+        ]
+      }
+    }));
+  };
+
+  const removeProduct = index => {
+    const products = form.content.products.filter((_, idx) => idx !== index);
+    setForm(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        products: products.length ? products : [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }]
+      }
     }));
   };
 
@@ -414,6 +476,46 @@ export default function DashboardPage() {
     }
   };
 
+  const handleProductImageUpload = async (index, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!authToken) {
+      setError('Please log in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading menu image...');
+      const url = await uploadImage(file);
+      setForm(prev => {
+        const products = [...prev.content.products];
+        products[index] = {
+          ...products[index],
+          image: {
+            url,
+            alt: products[index]?.image?.alt || file.name
+          }
+        };
+
+        return {
+          ...prev,
+          content: {
+            ...prev.content,
+            products
+          }
+        };
+      });
+      setStatus('Menu image uploaded successfully. Save your website to publish it.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setError(null);
@@ -439,7 +541,9 @@ export default function DashboardPage() {
           images: (form.content.heroCarousel?.images || []).filter(image => image.url)
         },
         services: form.content.services.filter(service => service.title || service.description || service.image?.url),
-        products: form.content.products.filter(product => product.title || product.description)
+        products: form.content.products.filter(
+          product => product.title || product.description || product.category || product.image?.url
+        )
       }
     };
 
@@ -734,65 +838,150 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Services</h3>
-                <button type="button" onClick={addService} className="rounded-full bg-primary px-4 py-2 text-white">
-                  Add Service
-                </button>
-              </div>
+            {!isRestaurant && !isShopping ? (
               <div className="space-y-4">
-                {form.content.services.map((service, index) => (
-                  <div key={index} className="rounded-3xl border border-slate-300 p-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <input
-                        value={service.title}
-                        onChange={e => handleServiceChange(index, 'title', e.target.value)}
-                        className="rounded-xl border border-slate-300 px-4 py-3"
-                        placeholder="Service title"
-                      />
-                      <input
-                        value={service.description}
-                        onChange={e => handleServiceChange(index, 'description', e.target.value)}
-                        className="rounded-xl border border-slate-300 px-4 py-3"
-                        placeholder="Service description"
-                      />
-                    </div>
-                    <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div>
-                        <p className="text-sm font-medium text-slate-700">Service Image (optional)</p>
-                        <p className="mt-1 text-sm text-slate-500">Add an image only if you want this service card to show one.</p>
-                      </div>
-                      <input type="file" accept="image/*" onChange={e => handleServiceImageUpload(index, e)} />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Services</h3>
+                  <button type="button" onClick={addService} className="rounded-full bg-primary px-4 py-2 text-white">
+                    Add Service
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {form.content.services.map((service, index) => (
+                    <div key={index} className="rounded-3xl border border-slate-300 p-4">
                       <div className="grid gap-4 md:grid-cols-2">
                         <input
-                          value={service.image?.url || ''}
-                          onChange={e => handleServiceImageChange(index, 'url', e.target.value)}
+                          value={service.title}
+                          onChange={e => handleServiceChange(index, 'title', e.target.value)}
                           className="rounded-xl border border-slate-300 px-4 py-3"
-                          placeholder="Service image URL"
+                          placeholder="Service title"
                         />
                         <input
-                          value={service.image?.alt || ''}
-                          onChange={e => handleServiceImageChange(index, 'alt', e.target.value)}
+                          value={service.description}
+                          onChange={e => handleServiceChange(index, 'description', e.target.value)}
                           className="rounded-xl border border-slate-300 px-4 py-3"
-                          placeholder="Service image alt text"
+                          placeholder="Service description"
                         />
                       </div>
-                      {service.image?.url ? (
-                        <img
-                          src={service.image.url}
-                          alt={service.image.alt || `Service ${index + 1}`}
-                          className="h-44 w-full rounded-2xl object-cover"
-                        />
-                      ) : null}
+                      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">Service Image (optional)</p>
+                          <p className="mt-1 text-sm text-slate-500">Add an image only if you want this service card to show one.</p>
+                        </div>
+                        <input type="file" accept="image/*" onChange={e => handleServiceImageUpload(index, e)} />
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <input
+                            value={service.image?.url || ''}
+                            onChange={e => handleServiceImageChange(index, 'url', e.target.value)}
+                            className="rounded-xl border border-slate-300 px-4 py-3"
+                            placeholder="Service image URL"
+                          />
+                          <input
+                            value={service.image?.alt || ''}
+                            onChange={e => handleServiceImageChange(index, 'alt', e.target.value)}
+                            className="rounded-xl border border-slate-300 px-4 py-3"
+                            placeholder="Service image alt text"
+                          />
+                        </div>
+                        {service.image?.url ? (
+                          <img
+                            src={service.image.url}
+                            alt={service.image.alt || `Service ${index + 1}`}
+                            className="h-44 w-full rounded-2xl object-cover"
+                          />
+                        ) : null}
+                      </div>
+                      <button type="button" onClick={() => removeService(index)} className="mt-3 text-sm text-red-700">
+                        Remove
+                      </button>
                     </div>
-                    <button type="button" onClick={() => removeService(index)} className="mt-3 text-sm text-red-700">
-                      Remove
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">{productSectionTitle}</h3>
+                    <p className="mt-1 text-sm text-slate-500">{productSectionDescription}</p>
+                  </div>
+                  <button type="button" onClick={addProduct} className="rounded-full bg-primary px-4 py-2 text-white">
+                    {isRestaurant ? 'Add Menu Item' : 'Add Product'}
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {form.content.products.map((product, index) => (
+                    <div key={index} className="rounded-3xl border border-slate-300 p-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <input
+                          value={product.title}
+                          onChange={e => handleProductChange(index, 'title', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3"
+                          placeholder={isRestaurant ? 'Menu item name' : 'Product name'}
+                        />
+                        <input
+                          value={product.category || ''}
+                          onChange={e => handleProductChange(index, 'category', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3"
+                          placeholder={isRestaurant ? 'Category e.g. Starters' : 'Category'}
+                        />
+                        <textarea
+                          value={product.description}
+                          onChange={e => handleProductChange(index, 'description', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3 md:col-span-2"
+                          rows="3"
+                          placeholder={isRestaurant ? 'Describe the dish' : 'Describe the product'}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={product.price}
+                          onChange={e => handleProductChange(index, 'price', e.target.value)}
+                          className="rounded-xl border border-slate-300 px-4 py-3"
+                          placeholder="Price"
+                        />
+                      </div>
+                      <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">{isRestaurant ? 'Menu Image (optional)' : 'Product Image (optional)'}</p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {isRestaurant
+                              ? 'Add an image if you want this item to stand out in the restaurant menu.'
+                              : 'Add an image if you want this product card to show one.'}
+                          </p>
+                        </div>
+                        <input type="file" accept="image/*" onChange={e => handleProductImageUpload(index, e)} />
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <input
+                            value={product.image?.url || ''}
+                            onChange={e => handleProductImageChange(index, 'url', e.target.value)}
+                            className="rounded-xl border border-slate-300 px-4 py-3"
+                            placeholder={isRestaurant ? 'Menu image URL' : 'Product image URL'}
+                          />
+                          <input
+                            value={product.image?.alt || ''}
+                            onChange={e => handleProductImageChange(index, 'alt', e.target.value)}
+                            className="rounded-xl border border-slate-300 px-4 py-3"
+                            placeholder={isRestaurant ? 'Menu image alt text' : 'Product image alt text'}
+                          />
+                        </div>
+                        {product.image?.url ? (
+                          <img
+                            src={product.image.url}
+                            alt={product.image.alt || `${product.title || 'Product'} preview`}
+                            className="h-44 w-full rounded-2xl object-cover"
+                          />
+                        ) : null}
+                      </div>
+                      <button type="button" onClick={() => removeProduct(index)} className="mt-3 text-sm text-red-700">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-4 md:grid-cols-3">
               <input

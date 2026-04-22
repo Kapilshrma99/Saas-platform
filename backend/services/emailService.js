@@ -102,4 +102,75 @@ const sendBookingNotification = async ({ tenant, booking }) => {
   return { sent: true };
 };
 
-module.exports = { sendBookingNotification };
+const formatCurrency = value => {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return String(value);
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2
+  }).format(numericValue);
+};
+
+const sendOrderNotification = async ({ tenant, order }) => {
+  const recipient = tenant?.owner?.email;
+  const config = getMailConfig();
+  const mailer = getTransporter();
+
+  if (!recipient || !config || !mailer) {
+    return { sent: false, reason: 'Mail service not configured' };
+  }
+
+  const businessName = tenant.name || tenant.content?.title || 'Your website';
+  const items = order.items || [];
+  const itemsText = items
+    .map(item => `${item.quantity} x ${item.title}${item.price ? ` (${formatCurrency(item.price)})` : ''}`)
+    .join('\n');
+  const itemsHtml = items
+    .map(
+      item =>
+        `<li><strong>${escapeHtml(String(item.quantity))} x ${escapeHtml(item.title)}</strong>${
+          item.price ? ` - ${escapeHtml(formatCurrency(item.price))}` : ''
+        }</li>`
+    )
+    .join('');
+
+  await mailer.sendMail({
+    from: config.from,
+    to: recipient,
+    subject: `New order received for ${businessName}`,
+    text: [
+      `You received a new order for ${businessName}.`,
+      '',
+      `Customer: ${order.customerName}`,
+      `Phone: ${order.phone}`,
+      `Email: ${order.email || 'Not provided'}`,
+      `Address: ${order.address || 'Not provided'}`,
+      '',
+      'Items:',
+      itemsText,
+      '',
+      `Total: ${formatCurrency(order.totalAmount)}`,
+      `Notes: ${order.notes || 'No additional notes provided.'}`
+    ].join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+        <h2 style="margin-bottom: 16px;">New restaurant order</h2>
+        <p>You received a new order for <strong>${escapeHtml(businessName)}</strong>.</p>
+        <p><strong>Customer:</strong> ${escapeHtml(order.customerName)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
+        <p><strong>Address:</strong> ${escapeHtml(order.address || 'Not provided')}</p>
+        <p><strong>Total:</strong> ${escapeHtml(formatCurrency(order.totalAmount))}</p>
+        <p><strong>Items:</strong></p>
+        <ul>${itemsHtml}</ul>
+        <p><strong>Notes:</strong> ${escapeHtml(order.notes || 'No additional notes provided.')}</p>
+      </div>
+    `
+  });
+
+  return { sent: true };
+};
+
+module.exports = { sendBookingNotification, sendOrderNotification };

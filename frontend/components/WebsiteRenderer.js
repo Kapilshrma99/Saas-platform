@@ -2,90 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import BookingForm from './BookingForm';
+import ProductOrderForm from './businesses/restaurant/ProductOrderForm';
+import {
+  getBusinessPreset,
+  getBusinessTypeLabel,
+  getOfferings,
+  shouldShowBookingForm,
+  shouldShowOrderForm
+} from './businesses';
 import { applyTheme } from '../services/theme';
-
-const businessPresets = {
-  doctor: {
-    badge: 'Care Studio',
-    offeringLabel: 'Treatments',
-    homeTitle: 'Modern care, calm experience, trusted expertise.',
-    homeDescription:
-      'Create a reassuring digital presence with clear services, specialist highlights, and simple appointment paths.',
-    sectionTone: 'Clean, calm, and confidence-building presentation for patients and families.',
-    audienceTitle: 'What patients value most',
-    audiencePoints: ['Clear treatment information', 'Fast appointment flow', 'Confidence-building presentation'],
-    ctaLabel: 'Book Appointment',
-    spotlightTitle: 'Care that feels considered from first click to first visit.',
-    surfaceClass:
-      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,255,255,0.72)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(56,189,248,0.16),transparent_28%)]',
-    accentPanelClass: 'bg-slate-950 text-white',
-    mutedPanelClass: 'bg-cyan-50/80'
-  },
-  restaurant: {
-    badge: 'Dining House',
-    offeringLabel: 'Menu',
-    homeTitle: 'Atmosphere, signature dishes, and easy reservations.',
-    homeDescription:
-      'Turn the website into a digital dining experience with richer presentation, featured menu items, and direct bookings.',
-    sectionTone: 'Warm, appetizing, and designed to feel like an invitation in.',
-    audienceTitle: 'What guests want quickly',
-    audiencePoints: ['Signature dishes upfront', 'Photos that build appetite', 'A simple reservation path'],
-    ctaLabel: 'Reserve or Enquire',
-    spotlightTitle: 'A digital dining room that makes the first impression count.',
-    surfaceClass:
-      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(255,248,240,0.78)),radial-gradient(circle_at_top_left,rgba(251,146,60,0.20),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(245,158,11,0.16),transparent_28%)]',
-    accentPanelClass: 'bg-[#1f1307] text-white',
-    mutedPanelClass: 'bg-orange-50/85'
-  },
-  shopping: {
-    badge: 'Storefront',
-    offeringLabel: 'Products',
-    homeTitle: 'A polished storefront designed to help products stand out.',
-    homeDescription:
-      'Blend visual merchandising, featured items, and a sharper brand voice into one clean customer-facing experience.',
-    sectionTone: 'Confident, product-led, and focused on visual clarity.',
-    audienceTitle: 'What shoppers look for',
-    audiencePoints: ['Fast product scanning', 'Clear pricing', 'Visual confidence from the first fold'],
-    ctaLabel: 'Browse Products',
-    spotlightTitle: 'Merchandising, storytelling, and conversion-ready structure in one place.',
-    surfaceClass:
-      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(244,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(99,102,241,0.18),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.16),transparent_28%)]',
-    accentPanelClass: 'bg-slate-950 text-white',
-    mutedPanelClass: 'bg-indigo-50/80'
-  },
-  freelancer: {
-    badge: 'Independent Studio',
-    offeringLabel: 'Services',
-    homeTitle: 'A personal brand presence with clarity and creative confidence.',
-    homeDescription:
-      'Showcase your expertise, your process, and your best offers with a website that feels premium and personal.',
-    sectionTone: 'Expressive, sharp, and tailored to solo-brand storytelling.',
-    audienceTitle: 'What clients are assessing',
-    audiencePoints: ['Your point of view', 'Your offers and outcomes', 'How easy it is to start a conversation'],
-    ctaLabel: 'Start a Conversation',
-    spotlightTitle: 'A brand-forward presence built to make expertise feel tangible.',
-    surfaceClass:
-      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(250,247,255,0.78)),radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(236,72,153,0.14),transparent_28%)]',
-    accentPanelClass: 'bg-slate-950 text-white',
-    mutedPanelClass: 'bg-fuchsia-50/70'
-  },
-  default: {
-    badge: 'Brand Website',
-    offeringLabel: 'Services',
-    homeTitle: 'A stronger digital front door for the business.',
-    homeDescription:
-      'Present your services, visuals, and contact details with a cleaner and more premium customer experience.',
-    sectionTone: 'Balanced, premium, and easy for visitors to navigate.',
-    audienceTitle: 'What visitors need quickly',
-    audiencePoints: ['A clear offer', 'Reasons to trust the business', 'A direct next step'],
-    ctaLabel: 'Get In Touch',
-    spotlightTitle: 'A polished customer-facing experience designed to build momentum.',
-    surfaceClass:
-      'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(247,249,252,0.78)),radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_28%)]',
-    accentPanelClass: 'bg-slate-950 text-white',
-    mutedPanelClass: 'bg-slate-50/85'
-  }
-};
 
 function SectionShell({ kicker, title, description, aside, children }) {
   return (
@@ -125,10 +50,6 @@ function InfoCard({ label, value, href }) {
   );
 }
 
-function getBusinessTypeLabel(businessType) {
-  return businessType ? businessType.replace('-', ' ') : 'business';
-}
-
 function getInitials(name) {
   if (!name) return 'BW';
   return name
@@ -138,13 +59,6 @@ function getInitials(name) {
     .map(part => part[0])
     .join('')
     .toUpperCase();
-}
-
-function getOfferings(content, businessType) {
-  if (businessType === 'shopping') {
-    return content?.products?.filter(product => product.title || product.description) || [];
-  }
-  return content?.services?.filter(service => service.title || service.description || service.image?.url) || [];
 }
 
 function splitStory(description, fallbackName) {
@@ -194,7 +108,7 @@ export default function WebsiteRenderer({ tenant }) {
 
   const content = tenant?.content || {};
   const businessTypeLabel = getBusinessTypeLabel(tenant?.businessType);
-  const preset = businessPresets[tenant?.businessType] || businessPresets.default;
+  const preset = getBusinessPreset(tenant?.businessType);
   const offerings = getOfferings(content, tenant?.businessType);
   const contactInfo = content.contactInfo || {};
   const images = content.images || [];
@@ -213,7 +127,8 @@ export default function WebsiteRenderer({ tenant }) {
   const offeringLabel = preset.offeringLabel;
   const heroTitle = content.title || preset.homeTitle;
   const aboutParagraphs = splitStory(content.description, tenant?.name || 'This business');
-  const showBookingForm = tenant?.businessType !== 'shopping';
+  const showOrderForm = shouldShowOrderForm(tenant?.businessType);
+  const showBookingForm = shouldShowBookingForm(tenant?.businessType);
   const featuredOfferings = offerings.slice(0, 4);
   const featuredImages = images.slice(0, 5);
   const storyHighlights = [
@@ -577,21 +492,27 @@ export default function WebsiteRenderer({ tenant }) {
       {renderFeaturedOfferings()}
       {renderVisualSpotlight()}
 
-      {showBookingForm ? (
+      {showOrderForm || showBookingForm ? (
         <SectionShell
-          kicker="Connect"
+          kicker={showOrderForm ? 'Order' : 'Connect'}
           title={preset.ctaLabel}
-          description="Turn the website into an active channel for leads, bookings, and direct conversations."
+          description={
+            showOrderForm
+              ? 'Let guests choose dishes and send their order directly to the restaurant owner.'
+              : 'Turn the website into an active channel for leads, bookings, and direct conversations.'
+          }
           aside={
             <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
               <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Quick Note</p>
               <p className="mt-3 text-sm leading-7 text-white/72">
-                This section is designed to feel integrated into the brand rather than like a generic form block.
+                {showOrderForm
+                  ? 'This section turns the restaurant page into an ordering channel instead of only a brochure.'
+                  : 'This section is designed to feel integrated into the brand rather than like a generic form block.'}
               </p>
             </div>
           }
         >
-          <BookingForm tenant={tenant} />
+          {showOrderForm ? <ProductOrderForm tenant={tenant} /> : <BookingForm tenant={tenant} />}
         </SectionShell>
       ) : null}
     </div>
@@ -796,13 +717,17 @@ export default function WebsiteRenderer({ tenant }) {
         </div>
       </section>
 
-      {showBookingForm ? (
+      {showOrderForm || showBookingForm ? (
         <SectionShell
-          kicker="Booking"
+          kicker={showOrderForm ? 'Order' : 'Booking'}
           title={preset.ctaLabel}
-          description="Let the contact experience end in action, not confusion."
+          description={
+            showOrderForm
+              ? 'Let guests choose menu items and send the order directly to the owner.'
+              : 'Let the contact experience end in action, not confusion.'
+          }
         >
-          <BookingForm tenant={tenant} />
+          {showOrderForm ? <ProductOrderForm tenant={tenant} /> : <BookingForm tenant={tenant} />}
         </SectionShell>
       ) : null}
     </div>

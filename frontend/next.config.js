@@ -18,6 +18,10 @@ const nextConfig = {
         destination: `${backendApiOrigin}/api/bookings/:path*`
       },
       {
+        source: '/api/orders/:path*',
+        destination: `${backendApiOrigin}/api/orders/:path*`
+      },
+      {
         source: '/api/upload/:path*',
         destination: `${backendApiOrigin}/api/upload/:path*`
       }

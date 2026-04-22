@@ -32,7 +32,18 @@ const TenantSchema = new mongoose.Schema({
         }
       }
     ],
-    products: [{ title: String, description: String, price: Number }],
+    products: [
+      {
+        title: String,
+        description: String,
+        price: Number,
+        category: String,
+        image: {
+          url: String,
+          alt: String
+        }
+      }
+    ],
     images: [{ url: String, alt: String }],
     contactInfo: {
       phone: String,
