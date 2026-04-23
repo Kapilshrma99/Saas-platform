@@ -31,7 +31,7 @@ export function getOfferings(content, businessType) {
 }
 
 export function shouldShowOrderForm(businessType) {
-  return businessType === 'restaurant';
+  return businessType === 'restaurant' || businessType === 'shopping';
 }
 
 export function shouldShowBookingForm(businessType) {

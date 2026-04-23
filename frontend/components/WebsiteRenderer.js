@@ -498,7 +498,9 @@ export default function WebsiteRenderer({ tenant }) {
           title={preset.ctaLabel}
           description={
             showOrderForm
-              ? 'Let guests choose dishes and send their order directly to the restaurant owner.'
+              ? tenant?.businessType === 'restaurant'
+                ? 'Let guests choose dishes, pay online if they want, and send the order directly to the owner.'
+                : 'Let shoppers choose products, pay online if they want, and place an order directly from the website.'
               : 'Turn the website into an active channel for leads, bookings, and direct conversations.'
           }
           aside={
@@ -506,7 +508,9 @@ export default function WebsiteRenderer({ tenant }) {
               <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Quick Note</p>
               <p className="mt-3 text-sm leading-7 text-white/72">
                 {showOrderForm
-                  ? 'This section turns the restaurant page into an ordering channel instead of only a brochure.'
+                  ? tenant?.businessType === 'restaurant'
+                    ? 'This section turns the restaurant page into a real ordering channel instead of only a brochure.'
+                    : 'This section turns the storefront into a product catalog with a built-in checkout path.'
                   : 'This section is designed to feel integrated into the brand rather than like a generic form block.'}
               </p>
             </div>
@@ -723,7 +727,9 @@ export default function WebsiteRenderer({ tenant }) {
           title={preset.ctaLabel}
           description={
             showOrderForm
-              ? 'Let guests choose menu items and send the order directly to the owner.'
+              ? tenant?.businessType === 'restaurant'
+                ? 'Let guests choose menu items, pay online if they want, and send the order directly to the owner.'
+                : 'Let customers choose products, pay online if they want, and place an order directly with the business.'
               : 'Let the contact experience end in action, not confusion.'
           }
         >

@@ -3,6 +3,10 @@
 import { useMemo, useState } from 'react';
 
 export default function ProductOrderForm({ tenant }) {
+  const isRestaurant = tenant?.businessType === 'restaurant';
+  const itemLabel = isRestaurant ? 'menu item' : 'product';
+  const itemLabelPlural = isRestaurant ? 'menu items' : 'products';
+
   const menuItems = useMemo(
     () =>
       (tenant?.content?.products || []).filter(
@@ -18,6 +22,7 @@ export default function ProductOrderForm({ tenant }) {
     address: '',
     notes: ''
   });
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,30 +43,131 @@ export default function ProductOrderForm({ tenant }) {
     }));
   };
 
+  const loadRazorpayCheckout = () =>
+    new Promise((resolve, reject) => {
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        resolve(window.Razorpay);
+        return;
+      }
+
+      const existingScript = document.querySelector('script[data-razorpay-checkout="true"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => resolve(window.Razorpay), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load payment checkout.')), { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.dataset.razorpayCheckout = 'true';
+      script.onload = () => resolve(window.Razorpay);
+      script.onerror = () => reject(new Error('Failed to load payment checkout.'));
+      document.body.appendChild(script);
+    });
+
+  const saveOrder = async paymentDetails => {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenantId: tenant._id,
+        ...customer,
+        items: selectedItems,
+        paymentMethod,
+        ...paymentDetails
+      })
+    });
+
+    return response.json();
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
 
     if (!selectedItems.length) {
-      setStatus({ type: 'error', message: 'Choose at least one menu item before placing the order.' });
+      setStatus({ type: 'error', message: `Choose at least one ${itemLabel} before placing the order.` });
+      return;
+    }
+
+    if (paymentMethod === 'online' && totalAmount <= 0) {
+      setStatus({ type: 'error', message: 'Online payment is available only when the order total is greater than zero.' });
       return;
     }
 
     setLoading(true);
+    setStatus(null);
     try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId: tenant._id,
-          ...customer,
-          items: selectedItems
-        })
-      });
-      const data = await response.json();
+      let data;
+
+      if (paymentMethod === 'online') {
+        const RazorpayCheckout = await loadRazorpayCheckout();
+        const paymentOrderResponse = await fetch('/api/payments/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: Math.round(totalAmount * 100),
+            receipt: `${tenant?.slug || tenant?._id || 'business'}-${Date.now()}`
+          })
+        });
+        const paymentOrder = await paymentOrderResponse.json();
+
+        if (!paymentOrderResponse.ok) {
+          throw new Error(paymentOrder.error || 'Unable to start payment.');
+        }
+
+        data = await new Promise((resolve, reject) => {
+          const checkout = new RazorpayCheckout({
+            key: paymentOrder.razorpayKeyId,
+            amount: paymentOrder.amount,
+            currency: paymentOrder.currency || 'INR',
+            order_id: paymentOrder.id,
+            name: tenant?.name || 'Business order',
+            description: isRestaurant ? 'Restaurant order payment' : 'Product order payment',
+            prefill: {
+              name: customer.customerName,
+              email: customer.email,
+              contact: customer.phone
+            },
+            notes: {
+              tenantId: tenant?._id,
+              businessType: tenant?.businessType || 'business'
+            },
+            theme: {
+              color: tenant?.theme?.primaryColor || '#b45309'
+            },
+            handler: async response => {
+              try {
+                const orderData = await saveOrder({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                });
+                resolve(orderData);
+              } catch (submitError) {
+                reject(submitError);
+              }
+            },
+            modal: {
+              ondismiss: () => reject(new Error('Payment was cancelled.'))
+            }
+          });
+
+          checkout.open();
+        });
+      } else {
+        data = await saveOrder();
+      }
 
       setStatus({
         type: data.error ? 'error' : 'success',
-        message: data.error ? data.error : 'Your order has been sent to the restaurant.'
+        message: data.error
+          ? data.error
+          : paymentMethod === 'online'
+            ? 'Payment successful and your order has been sent.'
+            : isRestaurant
+              ? 'Your order has been sent to the restaurant.'
+              : 'Your order has been sent to the business.'
       });
 
       if (!data.error) {
@@ -73,9 +179,10 @@ export default function ProductOrderForm({ tenant }) {
           address: '',
           notes: ''
         });
+        setPaymentMethod('cod');
       }
     } catch (error) {
-      setStatus({ type: 'error', message: 'Failed to place the order. Please try again.' });
+      setStatus({ type: 'error', message: error.message || 'Failed to place the order. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -84,7 +191,7 @@ export default function ProductOrderForm({ tenant }) {
   if (!menuItems.length) {
     return (
       <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white/80 p-8 text-slate-500">
-        No menu items added yet. The restaurant owner can add them from the dashboard.
+        No {itemLabelPlural} added yet. The business owner can add them from the dashboard.
       </div>
     );
   }
@@ -93,7 +200,11 @@ export default function ProductOrderForm({ tenant }) {
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-orange-100">
       <div className="bg-[#b45309] px-8 py-6 text-center text-white">
         <h2 className="px-4 text-2xl font-bold tracking-tight">Place an Order</h2>
-        <p className="mt-2 text-sm text-orange-100">Choose dishes, share your details, and send the order directly.</p>
+        <p className="mt-2 text-sm text-orange-100">
+          {isRestaurant
+            ? 'Choose dishes, share your details, and pay online or on delivery.'
+            : 'Choose products, share your details, and pay online or on delivery.'}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 p-8">
@@ -103,7 +214,7 @@ export default function ProductOrderForm({ tenant }) {
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-semibold text-slate-900">{item.title || `Menu item ${index + 1}`}</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{item.title || `${isRestaurant ? 'Menu item' : 'Product'} ${index + 1}`}</h3>
                     {item.category ? (
                       <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-orange-700">
                         {item.category}
@@ -130,6 +241,32 @@ export default function ProductOrderForm({ tenant }) {
         <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
           <p className="text-sm font-medium text-orange-900">Order total</p>
           <p className="mt-2 text-2xl font-bold text-orange-950">Rs. {totalAmount.toFixed(2)}</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('cod')}
+              className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                paymentMethod === 'cod'
+                  ? 'border-orange-300 bg-white text-orange-950 shadow-sm'
+                  : 'border-orange-100 bg-orange-50 text-orange-800'
+              }`}
+            >
+              <span className="block font-semibold">{isRestaurant ? 'Pay on delivery / pickup' : 'Cash on delivery'}</span>
+              <span className="mt-1 block text-xs opacity-80">Order now and settle with the business later.</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('online')}
+              className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                paymentMethod === 'online'
+                  ? 'border-orange-300 bg-white text-orange-950 shadow-sm'
+                  : 'border-orange-100 bg-orange-50 text-orange-800'
+              }`}
+            >
+              <span className="block font-semibold">Pay online now</span>
+              <span className="mt-1 block text-xs opacity-80">Secure checkout powered by Razorpay before the order is submitted.</span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -192,7 +329,9 @@ export default function ProductOrderForm({ tenant }) {
           disabled={loading}
           className="group relative w-full overflow-hidden rounded-2xl bg-[#b45309] py-4 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-[#92400e] active:scale-[0.98] disabled:opacity-70"
         >
-          <span className={loading ? 'opacity-0' : 'opacity-100 transition-opacity'}>Send Order</span>
+          <span className={loading ? 'opacity-0' : 'opacity-100 transition-opacity'}>
+            {paymentMethod === 'online' ? 'Pay & Place Order' : 'Send Order'}
+          </span>
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />

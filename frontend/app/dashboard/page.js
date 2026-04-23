@@ -47,6 +47,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const isRestaurant = form.businessType === 'restaurant';
   const isShopping = form.businessType === 'shopping';
+  const businessTypeHelp = {
+    doctor: 'Best for clinics, doctors, and appointment-based healthcare websites.',
+    restaurant: 'Best for food businesses that show menu items and take meal orders.',
+    shopping: 'Best for ecommerce stores that list products and accept customer orders.',
+    freelancer: 'Best for personal services, portfolios, and direct client enquiries.',
+    'small-business': 'Best for local businesses that mainly need services, contact info, and branding.'
+  };
   const productSectionTitle = isRestaurant ? 'Menu Items' : 'Products';
   const productSectionDescription = isRestaurant
     ? 'Create the dishes customers can browse and order from your restaurant website.'
@@ -668,6 +675,7 @@ export default function DashboardPage() {
                   <option value="freelancer">Freelancer</option>
                   <option value="small-business">Small Business</option>
                 </select>
+                <p className="mt-2 text-sm text-slate-500">{businessTypeHelp[form.businessType]}</p>
               </label>
             </div>
             <div className="rounded-3xl border border-slate-200 bg-white p-4">

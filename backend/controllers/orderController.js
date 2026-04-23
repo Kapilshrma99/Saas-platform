@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const Order = require('../models/Order');
 const OwnerNotification = require('../models/OwnerNotification');
 const Tenant = require('../models/Tenant');
@@ -6,42 +7,75 @@ const { emitOwnerNotification } = require('../services/socketService');
 
 const createOrder = async (req, res) => {
   try {
-    const { tenantId, customerName, phone, email, address, notes, items } = req.body;
+    const {
+      tenantId,
+      customerName,
+      phone,
+      email,
+      address,
+      notes,
+      items,
+      paymentMethod,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
     const tenant = await Tenant.findById(tenantId).lean();
 
     if (!tenant) {
       return res.status(404).json({ message: 'Tenant not found' });
     }
 
-    if (tenant.businessType !== 'restaurant') {
-      return res.status(400).json({ error: 'Ordering is available only for restaurant websites' });
+    if (!['restaurant', 'shopping'].includes(tenant.businessType)) {
+      return res.status(400).json({ error: 'Ordering is available only for restaurant and shopping websites' });
     }
 
-    const menuItems = tenant.content?.products || [];
+    const catalogItems = tenant.content?.products || [];
     const normalizedItems = (Array.isArray(items) ? items : [])
       .map(item => {
         const title = typeof item?.title === 'string' ? item.title.trim() : '';
         const quantity = Number(item?.quantity);
-        const matchedMenuItem = menuItems.find(menuItem => menuItem.title === title);
+        const matchedCatalogItem = catalogItems.find(catalogItem => catalogItem.title === title);
 
-        if (!title || !Number.isFinite(quantity) || quantity < 1 || !matchedMenuItem) {
+        if (!title || !Number.isFinite(quantity) || quantity < 1 || !matchedCatalogItem) {
           return null;
         }
 
         return {
-          title: matchedMenuItem.title,
-          price: Number(matchedMenuItem.price) || 0,
+          title: matchedCatalogItem.title,
+          price: Number(matchedCatalogItem.price) || 0,
           quantity,
-          category: matchedMenuItem.category || ''
+          category: matchedCatalogItem.category || ''
         };
       })
       .filter(Boolean);
 
     if (!normalizedItems.length) {
-      return res.status(400).json({ error: 'Please choose at least one valid menu item' });
+      return res.status(400).json({ error: 'Please choose at least one valid product' });
     }
 
     const totalAmount = normalizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const normalizedPaymentMethod = paymentMethod === 'online' ? 'online' : 'cod';
+    let paymentStatus = normalizedPaymentMethod === 'online' ? 'paid' : 'pending';
+
+    if (normalizedPaymentMethod === 'online') {
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ error: 'Missing Razorpay payment details' });
+      }
+
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        return res.status(500).json({ error: 'Missing Razorpay configuration' });
+      }
+
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+      const generatedSignature = hmac.digest('hex');
+
+      if (generatedSignature !== razorpay_signature) {
+        return res.status(400).json({ error: 'Payment verification failed' });
+      }
+    }
 
     const order = new Order({
       tenantId,
@@ -51,7 +85,12 @@ const createOrder = async (req, res) => {
       address,
       notes,
       items: normalizedItems,
-      totalAmount
+      totalAmount,
+      currency: 'INR',
+      paymentMethod: normalizedPaymentMethod,
+      paymentStatus,
+      razorpayOrderId: normalizedPaymentMethod === 'online' ? razorpay_order_id : '',
+      razorpayPaymentId: normalizedPaymentMethod === 'online' ? razorpay_payment_id : ''
     });
 
     await order.save();
@@ -62,8 +101,8 @@ const createOrder = async (req, res) => {
       const ownerNotification = await OwnerNotification.create({
         tenantId,
         type: 'order_created',
-        title: 'New restaurant order',
-        message: `${customerName} placed an order for ${itemCount} item${itemCount === 1 ? '' : 's'}.`,
+        title: 'New order received',
+        message: `${customerName} placed ${normalizedPaymentMethod === 'online' ? 'a paid' : 'an'} order for ${itemCount} item${itemCount === 1 ? '' : 's'}.`,
         payload: {
           orderId: order._id,
           customerName,
@@ -72,7 +111,9 @@ const createOrder = async (req, res) => {
           address: address || '',
           notes: notes || '',
           items: normalizedItems,
-          totalAmount
+          totalAmount,
+          paymentMethod: normalizedPaymentMethod,
+          paymentStatus
         }
       });
 

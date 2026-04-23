@@ -11,8 +11,17 @@ const PLAN_MAP = {
 const createPaymentOrder = async (req, res) => {
   try {
     const { amount, receipt } = req.body;
-    const order = await createOrder({ amount, receipt });
-    res.json(order);
+    const normalizedAmount = Number(amount);
+
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return res.status(400).json({ error: 'A valid amount is required' });
+    }
+
+    const order = await createOrder({ amount: normalizedAmount, receipt });
+    res.json({
+      ...order,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });

@@ -152,17 +152,21 @@ const sendOrderNotification = async ({ tenant, order }) => {
       itemsText,
       '',
       `Total: ${formatCurrency(order.totalAmount)}`,
+      `Payment method: ${order.paymentMethod || 'cod'}`,
+      `Payment status: ${order.paymentStatus || 'pending'}`,
       `Notes: ${order.notes || 'No additional notes provided.'}`
     ].join('\n'),
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
-        <h2 style="margin-bottom: 16px;">New restaurant order</h2>
+        <h2 style="margin-bottom: 16px;">New order received</h2>
         <p>You received a new order for <strong>${escapeHtml(businessName)}</strong>.</p>
         <p><strong>Customer:</strong> ${escapeHtml(order.customerName)}</p>
         <p><strong>Phone:</strong> ${escapeHtml(order.phone)}</p>
         <p><strong>Email:</strong> ${escapeHtml(order.email || 'Not provided')}</p>
         <p><strong>Address:</strong> ${escapeHtml(order.address || 'Not provided')}</p>
         <p><strong>Total:</strong> ${escapeHtml(formatCurrency(order.totalAmount))}</p>
+        <p><strong>Payment method:</strong> ${escapeHtml(order.paymentMethod || 'cod')}</p>
+        <p><strong>Payment status:</strong> ${escapeHtml(order.paymentStatus || 'pending')}</p>
         <p><strong>Items:</strong></p>
         <ul>${itemsHtml}</ul>
         <p><strong>Notes:</strong> ${escapeHtml(order.notes || 'No additional notes provided.')}</p>
