@@ -109,6 +109,32 @@ export default function WebsiteRenderer({ tenant }) {
   const content = tenant?.content || {};
   const businessTypeLabel = getBusinessTypeLabel(tenant?.businessType);
   const preset = getBusinessPreset(tenant?.businessType);
+  const themeClasses = {
+    pageBackgroundClass: preset.pageBackgroundClass || 'bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)]',
+    ambientBackgroundClass:
+      preset.ambientBackgroundClass ||
+      'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(250,204,21,0.12),transparent_26%),radial-gradient(circle_at_70%_50%,rgba(16,185,129,0.10),transparent_24%)]',
+    navClass: preset.navClass || 'border-white/70 bg-white/76',
+    brandMarkClass: preset.brandMarkClass || 'bg-slate-950 text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]',
+    heroGlassClass: preset.heroGlassClass || 'border-white/80 bg-white/85 text-slate-600 shadow-sm',
+    heroNoteClass: preset.heroNoteClass || 'border-white/80 bg-white/72 text-slate-600 shadow-sm',
+    audienceCardClass: preset.audienceCardClass || 'border-white/70 bg-white/65 text-slate-700 shadow-sm',
+    primaryButtonClass:
+      preset.primaryButtonClass ||
+      'bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 hover:bg-slate-900',
+    secondaryButtonClass:
+      preset.secondaryButtonClass ||
+      'border-slate-200 bg-white/88 text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white',
+    featureCardClass:
+      preset.featureCardClass ||
+      'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]',
+    sectionCardClass: preset.sectionCardClass || 'border-white/70 bg-white/76',
+    galleryFrameClass: preset.galleryFrameClass || 'border-slate-200/80 bg-slate-100',
+    footerClass: preset.footerClass || 'border-white/70 bg-white/80',
+    footerButtonClass: preset.footerButtonClass || 'bg-slate-950 text-white hover:bg-slate-900',
+    contactBannerSecondaryClass:
+      preset.contactBannerSecondaryClass || 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+  };
   const offerings = getOfferings(content, tenant?.businessType);
   const contactInfo = content.contactInfo || {};
   const images = content.images || [];
@@ -251,7 +277,7 @@ export default function WebsiteRenderer({ tenant }) {
             return (
               <article
                 key={`${item.title || 'item'}-${index}`}
-                className="group overflow-hidden rounded-[1.9rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+                className={`group overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
               >
                 {cardImage ? (
                   <img src={cardImage} alt={item.image?.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
@@ -365,7 +391,7 @@ export default function WebsiteRenderer({ tenant }) {
           }`}
         >
           <div className="max-w-[860px] space-y-8">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/80 bg-white/85 px-4 py-2 text-sm text-slate-600 shadow-sm">
+            <div className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 text-sm ${themeClasses.heroGlassClass}`}>
               <span className="h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_6px_rgba(255,255,255,0.65)]" />
               {preset.badge} for {tenant.name || 'your business'}
             </div>
@@ -380,14 +406,14 @@ export default function WebsiteRenderer({ tenant }) {
               <button
                 type="button"
                 onClick={() => setActivePage('offerings')}
-                className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-900"
+                className={`rounded-full px-6 py-3 text-sm font-semibold transition ${themeClasses.primaryButtonClass}`}
               >
                 {preset.ctaLabel}
               </button>
               <button
                 type="button"
                 onClick={() => setActivePage('gallery')}
-                className="rounded-full border border-slate-200 bg-white/88 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
+                className={`rounded-full border px-6 py-3 text-sm font-semibold transition ${themeClasses.secondaryButtonClass}`}
               >
                 See Visuals
               </button>
@@ -395,7 +421,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="grid max-w-[880px] gap-3 md:grid-cols-3">
               {heroNotes.map(note => (
-                <div key={note} className="rounded-[1.4rem] border border-white/80 bg-white/72 px-4 py-4 text-sm text-slate-600 shadow-sm">
+                <div key={note} className={`rounded-[1.4rem] border px-4 py-4 text-sm ${themeClasses.heroNoteClass}`}>
                   {note}
                 </div>
               ))}
@@ -403,7 +429,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="grid gap-3 md:grid-cols-3">
               {preset.audiencePoints.map(point => (
-                <div key={point} className="rounded-[1.35rem] border border-white/70 bg-white/65 px-4 py-4 text-sm font-medium text-slate-700 shadow-sm">
+                <div key={point} className={`rounded-[1.35rem] border px-4 py-4 text-sm font-medium ${themeClasses.audienceCardClass}`}>
                   {point}
                 </div>
               ))}
@@ -473,14 +499,14 @@ export default function WebsiteRenderer({ tenant }) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className={`rounded-[2.2rem] border border-white/70 p-7 shadow-sm ${preset.mutedPanelClass}`}>
+        <div className={`rounded-[2.2rem] border p-7 shadow-sm ${preset.mutedPanelClass} ${themeClasses.sectionCardClass}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">Brand Direction</p>
           <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-slate-950">{preset.spotlightTitle}</h2>
           <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">{preset.sectionTone}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {storyHighlights.map(item => (
-            <div key={item.label} className="rounded-[1.8rem] border border-white/70 bg-white/76 p-6 shadow-sm backdrop-blur">
+            <div key={item.label} className={`rounded-[1.8rem] border p-6 shadow-sm backdrop-blur ${themeClasses.sectionCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
               <p className="mt-4 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
               <p className="mt-3 text-sm leading-7 text-slate-600">{item.detail}</p>
@@ -591,7 +617,7 @@ export default function WebsiteRenderer({ tenant }) {
             return (
               <article
                 key={`${item.title || 'item'}-${index}`}
-                className="overflow-hidden rounded-[1.9rem] border border-slate-200/80 bg-white/86 shadow-sm transition hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]"
+                className={`overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
               >
                 {image?.url ? (
                   <img src={image.url} alt={image.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
@@ -651,7 +677,7 @@ export default function WebsiteRenderer({ tenant }) {
               return (
                 <div
                   key={`${image.url}-${index}`}
-                  className={`group overflow-hidden rounded-[1.9rem] border border-slate-200/75 bg-slate-100 shadow-sm ${
+                  className={`group overflow-hidden rounded-[1.9rem] border shadow-sm ${themeClasses.galleryFrameClass} ${
                     tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
                   }`}
                 >
@@ -713,7 +739,7 @@ export default function WebsiteRenderer({ tenant }) {
             <button
               type="button"
               onClick={() => setActivePage('gallery')}
-              className="w-full rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15"
+              className={`w-full rounded-full border px-5 py-3 text-sm font-semibold transition ${themeClasses.contactBannerSecondaryClass}`}
             >
               View Gallery
             </button>
@@ -749,17 +775,17 @@ export default function WebsiteRenderer({ tenant }) {
 
   return (
     <main
-      className="min-h-screen bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)] text-slate-900"
+      className={`min-h-screen text-slate-900 ${themeClasses.pageBackgroundClass}`}
       style={{ fontFamily: 'var(--font-family, Inter, sans-serif)' }}
     >
       <div className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[36rem] bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(250,204,21,0.12),transparent_26%),radial-gradient(circle_at_70%_50%,rgba(16,185,129,0.10),transparent_24%)]" />
+        <div className={`absolute inset-x-0 top-0 h-[36rem] ${themeClasses.ambientBackgroundClass}`} />
 
         <div className="relative mx-auto w-full max-w-[1600px] space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <nav className="sticky top-4 z-20 rounded-[2.2rem] border border-white/70 bg-white/76 px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
+          <nav className={`sticky top-4 z-20 rounded-[2.2rem] border px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6 ${themeClasses.navClass}`}>
             <div className="flex items-center justify-between gap-4 xl:hidden">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] bg-slate-950 text-sm font-black uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
                   {getInitials(tenant.name)}
                 </div>
                 <div className="min-w-0">
@@ -772,7 +798,7 @@ export default function WebsiteRenderer({ tenant }) {
                 onClick={() => setIsNavOpen(open => !open)}
                 aria-expanded={isNavOpen}
                 aria-label="Toggle navigation menu"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white/88 text-slate-700 transition hover:bg-white"
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border text-slate-700 transition ${themeClasses.secondaryButtonClass}`}
               >
                 <span className="text-lg leading-none">{isNavOpen ? 'X' : '='}</span>
               </button>
@@ -780,7 +806,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-6">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-[1.4rem] bg-slate-950 text-sm font-black uppercase tracking-[0.18em] text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-[1.4rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
                   {getInitials(tenant.name)}
                 </div>
                 <div>
@@ -798,7 +824,9 @@ export default function WebsiteRenderer({ tenant }) {
                       type="button"
                       onClick={() => setActivePage(page.id)}
                       className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                        isActive ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]' : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                        isActive
+                          ? `${themeClasses.brandMarkClass} shadow-[0_14px_28px_rgba(15,23,42,0.14)]`
+                          : 'bg-white/82 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
                       {page.label}
@@ -810,7 +838,7 @@ export default function WebsiteRenderer({ tenant }) {
               <button
                 type="button"
                 onClick={() => setActivePage('contact')}
-                className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(59,130,246,0.24)] transition hover:brightness-95"
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${themeClasses.primaryButtonClass}`}
               >
                 Contact
               </button>
@@ -827,7 +855,9 @@ export default function WebsiteRenderer({ tenant }) {
                         type="button"
                         onClick={() => setActivePage(page.id)}
                         className={`w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-                          isActive ? 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)]' : 'bg-white/82 text-slate-700 hover:bg-slate-100'
+                          isActive
+                            ? `${themeClasses.brandMarkClass} shadow-[0_14px_28px_rgba(15,23,42,0.14)]`
+                            : 'bg-white/82 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
                         {page.label}
@@ -839,7 +869,7 @@ export default function WebsiteRenderer({ tenant }) {
                 <button
                   type="button"
                   onClick={() => setActivePage('contact')}
-                  className="w-full rounded-2xl bg-[var(--primary)] px-5 py-3 text-sm font-semibold text-white shadow-[0_16px_35px_rgba(59,130,246,0.24)] transition hover:brightness-95"
+                  className={`w-full rounded-2xl px-5 py-3 text-sm font-semibold transition ${themeClasses.primaryButtonClass}`}
                 >
                   Contact
                 </button>
@@ -849,7 +879,7 @@ export default function WebsiteRenderer({ tenant }) {
 
           {pageContent[activePage]}
 
-          <footer className="rounded-[2.1rem] border border-white/70 bg-white/80 p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
+          <footer className={`rounded-[2.1rem] border p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10 ${themeClasses.footerClass}`}>
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_0.8fr_0.9fr]">
               <div className="space-y-5">
                 <div>
@@ -904,7 +934,7 @@ export default function WebsiteRenderer({ tenant }) {
               <button
                 type="button"
                 onClick={() => setActivePage('contact')}
-                className="rounded-full bg-slate-950 px-5 py-2.5 font-semibold text-white transition hover:bg-slate-900"
+                className={`rounded-full px-5 py-2.5 font-semibold transition ${themeClasses.footerButtonClass}`}
               >
                 Contact Now
               </button>

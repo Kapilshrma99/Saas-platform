@@ -3,6 +3,11 @@ import Image from 'next/image';
 import dashImage from './dash.jpg';
 
 export default function HomePage() {
+  const primaryCtaClass =
+    'rounded-full bg-indigo-600 px-8 py-4 text-center font-bold text-white shadow-xl shadow-indigo-200 transition-[background-color,box-shadow,transform] duration-200 hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+  const secondaryCtaClass =
+    'rounded-full border border-slate-200 bg-white px-8 py-4 text-center font-bold text-slate-900 transition-[border-color,background-color,transform] duration-200 hover:border-slate-300 hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+
   return (
     <div className="relative overflow-hidden bg-white">
       {/* Background blobs */}
@@ -17,18 +22,18 @@ export default function HomePage() {
               <span className="inline-block rounded-full bg-indigo-50 px-4 py-1.5 text-sm font-semibold text-indigo-600 ring-1 ring-inset ring-indigo-600/10">
                 New: AI-Powered Templates
               </span>
-              <h1 className="mt-8 text-5xl font-extrabold tracking-tight text-slate-900 md:text-7xl">
+              <h1 className="mt-8 text-balance text-5xl font-extrabold tracking-tight text-slate-900 md:text-7xl">
                 Build your <span className="gradient-text">dream business</span> faster.
               </h1>
               <p className="mt-6 text-lg leading-8 text-slate-600 md:text-xl">
                 Launch a modern, high-converting business website with dynamic themes, integrated bookings, and seamless subscription payments. No code required.
               </p>
               <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:justify-center lg:justify-start">
-                <Link href="/auth" className="rounded-full bg-indigo-600 px-8 py-4 text-center font-bold text-white shadow-xl shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-95">
-                  Get Started Free
+                <Link href="/auth" className={primaryCtaClass}>
+                  Start Building
                 </Link>
-                <Link href="/auth" className="rounded-full border border-slate-200 bg-white px-8 py-4 text-center font-bold text-slate-900 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95">
-                  Login To Manage
+                <Link href="/dashboard" className={secondaryCtaClass}>
+                  Open Dashboard
                 </Link>
               </div>
               <div className="mt-8 flex items-center justify-center gap-4 text-sm text-slate-500 lg:justify-start">
@@ -74,7 +79,10 @@ export default function HomePage() {
               { title: 'Smart Bookings', desc: 'Integrated scheduling system that lets your customers book services directly.' },
               { title: 'Global Payments', desc: 'Accept payments in 135+ currencies with local payment methods enabled.' }
             ].map((feature, i) => (
-              <div key={i} className="rounded-2xl border border-slate-200 bg-white p-8 transition-all hover:border-indigo-200 hover:shadow-lg">
+              <div
+                key={i}
+                className="rounded-2xl border border-slate-200 bg-white p-8 transition-[border-color,box-shadow,transform] duration-200 hover:border-indigo-200 hover:shadow-lg"
+              >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 font-bold">
                   {i + 1}
                 </div>
