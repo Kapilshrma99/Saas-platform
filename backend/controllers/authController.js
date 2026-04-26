@@ -40,6 +40,7 @@ const registerTenant = async (req, res) => {
       },
       websiteCreated: false
     });
+    delete tenant.slug;
     await tenant.save();
 
     const token = createToken(tenant);

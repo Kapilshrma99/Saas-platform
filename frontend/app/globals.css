@@ -118,3 +118,27 @@ input, select, textarea, button {
     transition-duration: 0.01ms !important;
   }
 }
+
+.website-shell {
+  --website-shell-width: 1600px;
+  --website-hero-title-size: 72px;
+  --website-section-radius: 36px;
+  --website-card-radius: 28px;
+}
+
+.website-shell .website-canvas {
+  max-width: var(--website-shell-width);
+}
+
+.website-shell .website-section {
+  border-radius: var(--website-section-radius) !important;
+}
+
+.website-shell .website-card {
+  border-radius: var(--website-card-radius) !important;
+}
+
+.website-shell .website-hero-title {
+  font-size: clamp(3rem, 5vw, var(--website-hero-title-size));
+  line-height: 0.95;
+}

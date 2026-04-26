@@ -14,7 +14,7 @@ import { applyTheme } from '../services/theme';
 
 function SectionShell({ kicker, title, description, aside, children }) {
   return (
-    <section className="relative overflow-hidden rounded-[2.25rem] border border-white/60 bg-white/72 p-7 shadow-[0_30px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-10">
+    <section className="website-section relative overflow-hidden rounded-[2.25rem] border border-white/60 bg-white/72 p-7 shadow-[0_30px_90px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-10">
       <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)]/40 to-transparent" />
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <div>
@@ -30,7 +30,7 @@ function SectionShell({ kicker, title, description, aside, children }) {
 }
 
 function EmptyState({ message }) {
-  return <div className="rounded-[1.8rem] border border-dashed border-slate-300 bg-white/70 p-8 text-slate-500">{message}</div>;
+  return <div className="website-card rounded-[1.8rem] border border-dashed border-slate-300 bg-white/70 p-8 text-slate-500">{message}</div>;
 }
 
 function InfoCard({ label, value, href }) {
@@ -43,7 +43,7 @@ function InfoCard({ label, value, href }) {
   );
 
   return (
-    <div className="rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
+    <div className="website-card rounded-[1.9rem] border border-slate-200/80 bg-white/86 p-6 shadow-sm">
       <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{label}</p>
       {content}
     </div>
@@ -85,6 +85,37 @@ function formatPrice(value) {
   return `$${numericPrice}`;
 }
 
+function getVideoEmbedData(url) {
+  if (!url) return null;
+
+  try {
+    const parsedUrl = new URL(url);
+    const host = parsedUrl.hostname.replace('www.', '');
+
+    if (host.includes('youtube.com')) {
+      const videoId = parsedUrl.searchParams.get('v');
+      if (!videoId) return null;
+      return { type: 'embed', src: `https://www.youtube.com/embed/${videoId}` };
+    }
+
+    if (host === 'youtu.be') {
+      const videoId = parsedUrl.pathname.split('/').filter(Boolean)[0];
+      if (!videoId) return null;
+      return { type: 'embed', src: `https://www.youtube.com/embed/${videoId}` };
+    }
+
+    if (host.includes('vimeo.com')) {
+      const videoId = parsedUrl.pathname.split('/').filter(Boolean)[0];
+      if (!videoId) return null;
+      return { type: 'embed', src: `https://player.vimeo.com/video/${videoId}` };
+    }
+
+    return { type: 'video', src: url };
+  } catch {
+    return null;
+  }
+}
+
 export default function WebsiteRenderer({ tenant }) {
   const [activePage, setActivePage] = useState('home');
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -107,6 +138,7 @@ export default function WebsiteRenderer({ tenant }) {
   }, [activePage]);
 
   const content = tenant?.content || {};
+  const customSections = Array.isArray(content.customSections) ? content.customSections : [];
   const businessTypeLabel = getBusinessTypeLabel(tenant?.businessType);
   const preset = getBusinessPreset(tenant?.businessType);
   const themeClasses = {
@@ -135,6 +167,7 @@ export default function WebsiteRenderer({ tenant }) {
     contactBannerSecondaryClass:
       preset.contactBannerSecondaryClass || 'border-white/20 bg-white/10 text-white hover:bg-white/15'
   };
+  const websiteWidth = Math.min(Math.max(Number(tenant?.theme?.siteWidth) || 1600, 960), 1680);
   const offerings = getOfferings(content, tenant?.businessType);
   const contactInfo = content.contactInfo || {};
   const images = content.images || [];
@@ -225,6 +258,88 @@ export default function WebsiteRenderer({ tenant }) {
     }
   ];
 
+  const renderCustomSectionBlock = (block, index, layout) => {
+    const alignmentClass =
+      block.align === 'center' ? 'text-center items-center' : block.align === 'right' ? 'text-right items-end' : 'text-left items-start';
+    const columnClass = layout === 'two-column' && Number(block.column) === 2 ? 'lg:col-start-2' : '';
+
+    if (block.type === 'image' && block.image?.url) {
+      return (
+        <div key={block.id || `${block.type}-${index}`} className={`website-card overflow-hidden rounded-[1.8rem] border border-slate-200/80 bg-slate-100 shadow-sm ${columnClass}`}>
+          <img
+            src={block.image.url}
+            alt={block.image.alt || `Custom section image ${index + 1}`}
+            className="h-full max-h-[28rem] w-full object-cover"
+          />
+        </div>
+      );
+    }
+
+    if (block.type === 'video' && block.video?.url) {
+      const videoData = getVideoEmbedData(block.video.url);
+      if (!videoData) return null;
+
+      return (
+        <div key={block.id || `${block.type}-${index}`} className={`website-card overflow-hidden rounded-[1.8rem] border border-slate-200/80 bg-slate-950 shadow-sm ${columnClass}`}>
+          <div className="aspect-video w-full">
+            {videoData.type === 'embed' ? (
+              <iframe
+                src={videoData.src}
+                title={block.video.title || `Custom video ${index + 1}`}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video controls className="h-full w-full">
+                <source src={videoData.src} />
+              </video>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (!block.content) return null;
+
+    if (block.type === 'heading') {
+      return (
+        <div key={block.id || `${block.type}-${index}`} className={`flex ${alignmentClass} ${columnClass}`}>
+          <h3 className="max-w-[18ch] text-3xl font-black tracking-[-0.05em] text-slate-950 sm:text-4xl">{block.content}</h3>
+        </div>
+      );
+    }
+
+    return (
+      <div key={block.id || `${block.type}-${index}`} className={`flex ${alignmentClass} ${columnClass}`}>
+        <p className="max-w-3xl text-base leading-8 text-slate-600 whitespace-pre-wrap">{block.content}</p>
+      </div>
+    );
+  };
+
+  const renderCustomSections = (page, placement) => {
+    const matchingSections = customSections.filter(section => section?.page === page && section?.placement === placement);
+    if (matchingSections.length === 0) return null;
+
+    return matchingSections.map((section, index) => {
+      const blocks = Array.isArray(section.blocks) ? section.blocks : [];
+      const layoutClass = section.layout === 'two-column' ? 'lg:grid-cols-2' : 'grid-cols-1';
+
+      return (
+        <SectionShell
+          key={section.id || `${page}-${placement}-${index}`}
+          kicker="Custom Section"
+          title={section.title || `Section ${index + 1}`}
+          description={section.description || undefined}
+        >
+          <div className={`grid gap-5 ${layoutClass}`}>
+            {blocks.map((block, blockIndex) => renderCustomSectionBlock(block, blockIndex, section.layout)).filter(Boolean)}
+          </div>
+        </SectionShell>
+      );
+    });
+  };
+
   useEffect(() => {
     if (resolvedHeroSlides.length <= 1) {
       setActiveHeroSlide(0);
@@ -246,7 +361,7 @@ export default function WebsiteRenderer({ tenant }) {
 
   if (!tenant) {
     return (
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-10 sm:px-6 lg:px-8">
+      <main className="website-shell website-canvas mx-auto w-full px-4 py-10 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 p-10 text-center shadow-sm">
           <h1 className="text-3xl font-bold">Website not found</h1>
           <p className="mt-3 text-slate-600">Check your link and try again.</p>
@@ -262,7 +377,7 @@ export default function WebsiteRenderer({ tenant }) {
         title={`Featured ${offeringLabel}`}
         description="The most important entries are surfaced with a cleaner, more editorial presentation."
         aside={
-          <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+          <div className={`website-card rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
             <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Selection</p>
             <p className="mt-3 text-sm leading-7 text-slate-600">
               A focused preview of what visitors should notice first when they land on the site.
@@ -277,7 +392,7 @@ export default function WebsiteRenderer({ tenant }) {
             return (
               <article
                 key={`${item.title || 'item'}-${index}`}
-                className={`group overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
+                className={`website-card group overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
               >
                 {cardImage ? (
                   <img src={cardImage} alt={item.image?.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
@@ -318,14 +433,14 @@ export default function WebsiteRenderer({ tenant }) {
         title="Visual Spotlight"
         description="A more branded image presentation helps the website feel active, current, and premium."
         aside={
-          <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+          <div className={`website-card rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
             <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Spotlight</p>
             <p className="mt-3 text-sm leading-7 text-white/72">{preset.spotlightTitle}</p>
           </div>
         }
       >
         <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+          <div className="website-card overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
             <img
               src={featuredImages[0].url}
               alt={featuredImages[0].alt || `${tenant.name || 'Business'} featured visual`}
@@ -334,7 +449,7 @@ export default function WebsiteRenderer({ tenant }) {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
             {featuredImages.slice(1, 5).map((image, index) => (
-              <div key={`${image.url}-${index}`} className="overflow-hidden rounded-[1.7rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+              <div key={`${image.url}-${index}`} className="website-card overflow-hidden rounded-[1.7rem] border border-slate-200/80 bg-slate-100 shadow-sm">
                 <img src={image.url} alt={image.alt || `Gallery image ${index + 2}`} className="h-40 w-full object-cover" />
               </div>
             ))}
@@ -345,8 +460,10 @@ export default function WebsiteRenderer({ tenant }) {
 
   const renderHomePage = () => (
     <div className="space-y-8">
+      {renderCustomSections('home', 'top')}
+
       <section
-        className={`relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${
+        className={`website-section relative overflow-hidden rounded-[2.75rem] border border-white/65 px-7 py-8 shadow-[0_34px_120px_rgba(15,23,42,0.14)] sm:px-10 sm:py-10 lg:px-12 lg:py-12 ${
           hasHeroBackground ? 'bg-slate-950/70' : preset.surfaceClass
         }`}
       >
@@ -384,11 +501,12 @@ export default function WebsiteRenderer({ tenant }) {
         <div className="absolute bottom-[-3rem] right-[-2rem] h-56 w-56 rounded-full bg-[var(--secondary)]/15 blur-3xl" />
 
         <div
-          className={`relative mx-auto grid max-w-[1500px] gap-10 lg:items-center ${
+          className={`relative mx-auto grid gap-10 lg:items-center ${
             hasHeroBackground
               ? 'lg:grid-cols-[minmax(0,1.25fr)_22rem] xl:grid-cols-[minmax(0,1.35fr)_23rem]'
               : 'lg:grid-cols-[minmax(0,1.3fr)_22rem] xl:grid-cols-[minmax(0,1.4fr)_23rem]'
           }`}
+          style={{ maxWidth: `${Math.max(websiteWidth - 100, 960)}px` }}
         >
           <div className="max-w-[860px] space-y-8">
             <div className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 text-sm ${themeClasses.heroGlassClass}`}>
@@ -398,7 +516,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="space-y-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.45em] text-[var(--primary)]">{businessTypeLabel}</p>
-              <h1 className="max-w-[13ch] text-5xl font-black tracking-[-0.06em] text-slate-950 sm:text-6xl xl:text-7xl">{heroTitle}</h1>
+              <h1 className="website-hero-title max-w-[13ch] text-5xl font-black tracking-[-0.06em] text-slate-950 sm:text-6xl xl:text-7xl">{heroTitle}</h1>
               <p className="max-w-[62ch] text-lg leading-8 text-slate-600 sm:text-xl">{content.description || preset.homeDescription}</p>
             </div>
 
@@ -421,7 +539,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="grid max-w-[880px] gap-3 md:grid-cols-3">
               {heroNotes.map(note => (
-                <div key={note} className={`rounded-[1.4rem] border px-4 py-4 text-sm ${themeClasses.heroNoteClass}`}>
+                <div key={note} className={`website-card rounded-[1.4rem] border px-4 py-4 text-sm ${themeClasses.heroNoteClass}`}>
                   {note}
                 </div>
               ))}
@@ -429,7 +547,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="grid gap-3 md:grid-cols-3">
               {preset.audiencePoints.map(point => (
-                <div key={point} className={`rounded-[1.35rem] border px-4 py-4 text-sm font-medium ${themeClasses.audienceCardClass}`}>
+                <div key={point} className={`website-card rounded-[1.35rem] border px-4 py-4 text-sm font-medium ${themeClasses.audienceCardClass}`}>
                   {point}
                 </div>
               ))}
@@ -458,7 +576,7 @@ export default function WebsiteRenderer({ tenant }) {
           </div>
 
           <div className="w-full max-w-[368px] justify-self-center space-y-4 lg:justify-self-end">
-            <div className={`rounded-[2rem] p-6 shadow-[0_22px_60px_rgba(15,23,42,0.24)] ${preset.accentPanelClass}`}>
+            <div className={`website-card rounded-[2rem] p-6 shadow-[0_22px_60px_rgba(15,23,42,0.24)] ${preset.accentPanelClass}`}>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.38em] text-white/55">Brand Snapshot</p>
@@ -478,7 +596,7 @@ export default function WebsiteRenderer({ tenant }) {
               </div>
             </div>
 
-            <div className={`rounded-[2rem] border border-white/80 p-6 shadow-sm ${preset.mutedPanelClass}`}>
+            <div className={`website-card rounded-[2rem] border border-white/80 p-6 shadow-sm ${preset.mutedPanelClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">{preset.audienceTitle}</p>
               <div className="mt-4 space-y-3">
                 {quickActions.map(action => (
@@ -499,14 +617,14 @@ export default function WebsiteRenderer({ tenant }) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className={`rounded-[2.2rem] border p-7 shadow-sm ${preset.mutedPanelClass} ${themeClasses.sectionCardClass}`}>
+        <div className={`website-card rounded-[2.2rem] border p-7 shadow-sm ${preset.mutedPanelClass} ${themeClasses.sectionCardClass}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.38em] text-slate-400">Brand Direction</p>
           <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-slate-950">{preset.spotlightTitle}</h2>
           <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">{preset.sectionTone}</p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {storyHighlights.map(item => (
-            <div key={item.label} className={`rounded-[1.8rem] border p-6 shadow-sm backdrop-blur ${themeClasses.sectionCardClass}`}>
+            <div key={item.label} className={`website-card rounded-[1.8rem] border p-6 shadow-sm backdrop-blur ${themeClasses.sectionCardClass}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
               <p className="mt-4 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
               <p className="mt-3 text-sm leading-7 text-slate-600">{item.detail}</p>
@@ -514,6 +632,8 @@ export default function WebsiteRenderer({ tenant }) {
           ))}
         </div>
       </section>
+
+      {renderCustomSections('home', 'middle')}
 
       {renderFeaturedOfferings()}
       {renderVisualSpotlight()}
@@ -530,7 +650,7 @@ export default function WebsiteRenderer({ tenant }) {
               : 'Turn the website into an active channel for leads, bookings, and direct conversations.'
           }
           aside={
-            <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+            <div className={`website-card rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
               <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Quick Note</p>
               <p className="mt-3 text-sm leading-7 text-white/72">
                 {showOrderForm
@@ -545,168 +665,193 @@ export default function WebsiteRenderer({ tenant }) {
           {showOrderForm ? <ProductOrderForm tenant={tenant} /> : <BookingForm tenant={tenant} />}
         </SectionShell>
       ) : null}
+
+      {renderCustomSections('home', 'bottom')}
     </div>
   );
 
   const renderAboutPage = () => (
-    <SectionShell
-      kicker="Story"
-      title={`About ${tenant.name || 'Us'}`}
-      description="A more refined, brand-led section for the owner's message and business identity."
-      aside={
-        <div className={`rounded-[1.75rem] p-6 shadow-xl ${preset.accentPanelClass}`}>
-          <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Identity</p>
-          <div className="mt-5 space-y-5">
-            <div>
-              <p className="text-sm text-white/60">Business Name</p>
-              <p className="mt-2 text-xl font-semibold">{tenant.name || 'Not set'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-white/60">Business Type</p>
-              <p className="mt-2 text-xl font-semibold capitalize">{businessTypeLabel}</p>
+    <div className="space-y-8">
+      {renderCustomSections('about', 'top')}
+
+      <SectionShell
+        kicker="Story"
+        title={`About ${tenant.name || 'Us'}`}
+        description="A more refined, brand-led section for the owner's message and business identity."
+        aside={
+          <div className={`website-card rounded-[1.75rem] p-6 shadow-xl ${preset.accentPanelClass}`}>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Identity</p>
+            <div className="mt-5 space-y-5">
+              <div>
+                <p className="text-sm text-white/60">Business Name</p>
+                <p className="mt-2 text-xl font-semibold">{tenant.name || 'Not set'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-white/60">Business Type</p>
+                <p className="mt-2 text-xl font-semibold capitalize">{businessTypeLabel}</p>
+              </div>
             </div>
           </div>
-        </div>
-      }
-    >
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-4">
-          {aboutParagraphs.map((paragraph, index) => (
-            <div key={`${paragraph}-${index}`} className="rounded-[1.9rem] border border-slate-200/80 bg-white/80 p-7 shadow-sm">
-              <p className="text-lg leading-9 text-slate-600">{paragraph}</p>
-            </div>
-          ))}
-        </div>
-        <div className="space-y-4">
-          <div className={`rounded-[1.9rem] border border-slate-200/80 p-7 shadow-sm ${preset.mutedPanelClass}`}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Brand Perspective</p>
-            <p className="mt-4 text-base leading-8 text-slate-600">
-              This page gives the website a stronger narrative center, helping visitors understand the personality behind the business.
-            </p>
+        }
+      >
+        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            {aboutParagraphs.map((paragraph, index) => (
+              <div key={`${paragraph}-${index}`} className="website-card rounded-[1.9rem] border border-slate-200/80 bg-white/80 p-7 shadow-sm">
+                <p className="text-lg leading-9 text-slate-600">{paragraph}</p>
+              </div>
+            ))}
           </div>
-          {storyHighlights.map(item => (
-            <div key={item.label} className="rounded-[1.75rem] border border-slate-200/80 bg-white/86 p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
-              <p className="mt-3 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">{item.detail}</p>
+          <div className="space-y-4">
+            <div className={`website-card rounded-[1.9rem] border border-slate-200/80 p-7 shadow-sm ${preset.mutedPanelClass}`}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Brand Perspective</p>
+              <p className="mt-4 text-base leading-8 text-slate-600">
+                This page gives the website a stronger narrative center, helping visitors understand the personality behind the business.
+              </p>
             </div>
-          ))}
+            {storyHighlights.map(item => (
+              <div key={item.label} className="website-card rounded-[1.75rem] border border-slate-200/80 bg-white/86 p-5 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">{item.label}</p>
+                <p className="mt-3 text-xl font-bold tracking-tight text-slate-950">{item.value}</p>
+                <p className="mt-2 text-sm leading-7 text-slate-600">{item.detail}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </SectionShell>
+      </SectionShell>
+
+      {renderCustomSections('about', 'middle')}
+      {renderCustomSections('about', 'bottom')}
+    </div>
   );
 
   const renderOfferingsPage = () => (
-    <SectionShell
-      kicker="Offerings"
-      title={offeringLabel}
-      description={`Everything here is presented as part of ${tenant.name || 'this business'}'s own website.`}
-      aside={
-        <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Collection</p>
-          <p className="mt-3 text-sm leading-7 text-slate-600">A complete overview for visitors who want to go beyond the homepage preview.</p>
-        </div>
-      }
-    >
-      {offerings.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {offerings.map((item, index) => {
-            const price = formatPrice(item.price);
-            const image = item.image?.url ? item.image : images[index % Math.max(images.length, 1)];
+    <div className="space-y-8">
+      {renderCustomSections('offerings', 'top')}
 
-            return (
-              <article
-                key={`${item.title || 'item'}-${index}`}
-                className={`overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
-              >
-                {image?.url ? (
-                  <img src={image.url} alt={image.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
-                ) : null}
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Item {index + 1}</p>
-                      <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
-                    </div>
-                    {price ? (
-                      <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
-                    ) : null}
-                  </div>
-                  <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
-                  <div className="mt-6 flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-500">Part of the main collection</span>
-                    <button
-                      type="button"
-                      onClick={() => setActivePage('contact')}
-                      className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      Contact
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState message={`No ${offeringLabel.toLowerCase()} added yet.`} />
-      )}
-    </SectionShell>
-  );
-
-  const renderGalleryPage = () => (
-    <SectionShell
-      kicker="Visuals"
-      title="Gallery"
-      description="A stronger visual showcase with larger crops and a more modern editorial rhythm."
-      aside={
-        <div className={`rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
-          <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Visual Tone</p>
-          <p className="mt-3 text-sm leading-7 text-white/72">Richer spacing and larger image surfaces help the business look more premium at a glance.</p>
-        </div>
-      }
-    >
-      {images.length > 0 ? (
-        <div className="space-y-5">
-          <div className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
-            <img src={images[0].url} alt={images[0].alt || 'Featured gallery image'} className="h-[420px] w-full object-cover" />
+      <SectionShell
+        kicker="Offerings"
+        title={offeringLabel}
+        description={`Everything here is presented as part of ${tenant.name || 'this business'}'s own website.`}
+        aside={
+          <div className={`website-card rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Collection</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">A complete overview for visitors who want to go beyond the homepage preview.</p>
           </div>
-          <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {images.slice(1).map((image, index) => {
-              const tallCard = index % 3 === 1;
+        }
+      >
+        {offerings.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {offerings.map((item, index) => {
+              const price = formatPrice(item.price);
+              const image = item.image?.url ? item.image : images[index % Math.max(images.length, 1)];
+
               return (
-                <div
-                  key={`${image.url}-${index}`}
-                  className={`group overflow-hidden rounded-[1.9rem] border shadow-sm ${themeClasses.galleryFrameClass} ${
-                    tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
-                  }`}
+                <article
+                  key={`${item.title || 'item'}-${index}`}
+                  className={`website-card overflow-hidden rounded-[1.9rem] border shadow-sm transition ${themeClasses.featureCardClass}`}
                 >
-                  <img
-                    src={image.url}
-                    alt={image.alt || `Image ${index + 2}`}
-                    className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
-                      tallCard ? 'h-full min-h-[460px]' : 'h-[220px]'
-                    }`}
-                  />
-                </div>
+                  {image?.url ? (
+                    <img src={image.url} alt={image.alt || item.title || `${offeringLabel} ${index + 1}`} className="h-52 w-full object-cover" />
+                  ) : null}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Item {index + 1}</p>
+                        <h3 className="mt-3 text-2xl font-bold tracking-tight text-slate-950">{item.title || `${offeringLabel} ${index + 1}`}</h3>
+                      </div>
+                      {price ? (
+                        <span className="rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white">{price}</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-4 text-base leading-7 text-slate-600">{item.description || 'More details coming soon.'}</p>
+                    <div className="mt-6 flex items-center justify-between gap-4">
+                      <span className="text-sm text-slate-500">Part of the main collection</span>
+                      <button
+                        type="button"
+                        onClick={() => setActivePage('contact')}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        Contact
+                      </button>
+                    </div>
+                  </div>
+                </article>
               );
             })}
           </div>
-        </div>
-      ) : (
-        <EmptyState message="No gallery images available right now." />
-      )}
-    </SectionShell>
+        ) : (
+          <EmptyState message={`No ${offeringLabel.toLowerCase()} added yet.`} />
+        )}
+      </SectionShell>
+
+      {renderCustomSections('offerings', 'middle')}
+      {renderCustomSections('offerings', 'bottom')}
+    </div>
+  );
+
+  const renderGalleryPage = () => (
+    <div className="space-y-8">
+      {renderCustomSections('gallery', 'top')}
+
+      <SectionShell
+        kicker="Visuals"
+        title="Gallery"
+        description="A stronger visual showcase with larger crops and a more modern editorial rhythm."
+        aside={
+          <div className={`website-card rounded-[1.75rem] p-5 shadow-xl ${preset.accentPanelClass}`}>
+            <p className="text-[11px] uppercase tracking-[0.35em] text-white/55">Visual Tone</p>
+            <p className="mt-3 text-sm leading-7 text-white/72">Richer spacing and larger image surfaces help the business look more premium at a glance.</p>
+          </div>
+        }
+      >
+        {images.length > 0 ? (
+          <div className="space-y-5">
+            <div className="website-card overflow-hidden rounded-[2rem] border border-slate-200/80 bg-slate-100 shadow-sm">
+              <img src={images[0].url} alt={images[0].alt || 'Featured gallery image'} className="h-[420px] w-full object-cover" />
+            </div>
+            <div className="grid auto-rows-[220px] gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {images.slice(1).map((image, index) => {
+                const tallCard = index % 3 === 1;
+                return (
+                  <div
+                    key={`${image.url}-${index}`}
+                    className={`website-card group overflow-hidden rounded-[1.9rem] border shadow-sm ${themeClasses.galleryFrameClass} ${
+                      tallCard ? 'md:row-span-2 md:min-h-[460px]' : ''
+                    }`}
+                  >
+                    <img
+                      src={image.url}
+                      alt={image.alt || `Image ${index + 2}`}
+                      className={`w-full object-cover transition duration-500 group-hover:scale-105 ${
+                        tallCard ? 'h-full min-h-[460px]' : 'h-[220px]'
+                      }`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <EmptyState message="No gallery images available right now." />
+        )}
+      </SectionShell>
+
+      {renderCustomSections('gallery', 'middle')}
+      {renderCustomSections('gallery', 'bottom')}
+    </div>
   );
 
   const renderContactPage = () => (
     <div className="space-y-8">
+      {renderCustomSections('contact', 'top')}
+
       <SectionShell
         kicker="Reach Out"
         title="Contact"
         description="A direct, user-facing contact section that feels part of the design system rather than an afterthought."
         aside={
-          <div className={`rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+          <div className={`website-card rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
             <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Response Paths</p>
             <p className="mt-3 text-sm leading-7 text-slate-600">Surface the quickest ways for customers to start a conversation.</p>
           </div>
@@ -719,7 +864,7 @@ export default function WebsiteRenderer({ tenant }) {
         </div>
       </SectionShell>
 
-      <section className={`rounded-[2.25rem] border border-white/70 p-8 shadow-[0_24px_60px_rgba(15,23,42,0.10)] ${preset.accentPanelClass}`}>
+      <section className={`website-section rounded-[2.25rem] border border-white/70 p-8 shadow-[0_24px_60px_rgba(15,23,42,0.10)] ${preset.accentPanelClass}`}>
         <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-center">
           <div>
             <p className="text-[11px] uppercase tracking-[0.38em] text-white/55">Next Step</p>
@@ -747,6 +892,8 @@ export default function WebsiteRenderer({ tenant }) {
         </div>
       </section>
 
+      {renderCustomSections('contact', 'middle')}
+
       {showOrderForm || showBookingForm ? (
         <SectionShell
           kicker={showOrderForm ? 'Order' : 'Booking'}
@@ -762,6 +909,8 @@ export default function WebsiteRenderer({ tenant }) {
           {showOrderForm ? <ProductOrderForm tenant={tenant} /> : <BookingForm tenant={tenant} />}
         </SectionShell>
       ) : null}
+
+      {renderCustomSections('contact', 'bottom')}
     </div>
   );
 
@@ -775,17 +924,17 @@ export default function WebsiteRenderer({ tenant }) {
 
   return (
     <main
-      className={`min-h-screen text-slate-900 ${themeClasses.pageBackgroundClass}`}
+      className={`website-shell min-h-screen text-slate-900 ${themeClasses.pageBackgroundClass}`}
       style={{ fontFamily: 'var(--font-family, Inter, sans-serif)' }}
     >
       <div className="relative overflow-hidden">
         <div className={`absolute inset-x-0 top-0 h-[36rem] ${themeClasses.ambientBackgroundClass}`} />
 
-        <div className="relative mx-auto w-full max-w-[1600px] space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
-          <nav className={`sticky top-4 z-20 rounded-[2.2rem] border px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6 ${themeClasses.navClass}`}>
+        <div className="website-canvas relative mx-auto w-full space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8" style={{ maxWidth: `${websiteWidth}px` }}>
+          <nav className={`website-section sticky top-4 z-20 rounded-[2.2rem] border px-4 py-4 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6 ${themeClasses.navClass}`}>
             <div className="flex items-center justify-between gap-4 xl:hidden">
               <div className="flex min-w-0 items-center gap-3">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
+                <div className={`website-card flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.2rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
                   {getInitials(tenant.name)}
                 </div>
                 <div className="min-w-0">
@@ -806,7 +955,7 @@ export default function WebsiteRenderer({ tenant }) {
 
             <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-6">
               <div className="flex items-center gap-4">
-                <div className={`flex h-14 w-14 items-center justify-center rounded-[1.4rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
+                <div className={`website-card flex h-14 w-14 items-center justify-center rounded-[1.4rem] text-sm font-black uppercase tracking-[0.18em] ${themeClasses.brandMarkClass}`}>
                   {getInitials(tenant.name)}
                 </div>
                 <div>
@@ -879,7 +1028,7 @@ export default function WebsiteRenderer({ tenant }) {
 
           {pageContent[activePage]}
 
-          <footer className={`rounded-[2.1rem] border p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10 ${themeClasses.footerClass}`}>
+          <footer className={`website-section rounded-[2.1rem] border p-8 text-slate-700 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10 ${themeClasses.footerClass}`}>
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_0.8fr_0.9fr]">
               <div className="space-y-5">
                 <div>

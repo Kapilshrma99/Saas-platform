@@ -1,9 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import WebsiteRenderer from '../../components/WebsiteRenderer';
+
+const clamp = (value, min, max, fallback = min) => {
+  const numericValue = Number(value);
+  if (Number.isNaN(numericValue)) return fallback;
+  return Math.min(Math.max(numericValue, min), max);
+};
 
 const initialForm = {
   name: '',
@@ -26,13 +32,18 @@ const initialForm = {
     services: [{ title: '', description: '', image: { url: '', alt: '' } }],
     products: [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
     images: [],
-    contactInfo: { phone: '', email: '', address: '' }
+    contactInfo: { phone: '', email: '', address: '' },
+    customSections: []
   },
   theme: {
     primaryColor: '#2f80ed',
     secondaryColor: '#f2c94c',
     fontFamily: 'Inter, sans-serif',
-    layout: 'modern'
+    layout: 'modern',
+    siteWidth: 1600,
+    heroTitleSize: 72,
+    sectionRadius: 36,
+    cardRadius: 28
   }
 };
 
@@ -58,6 +69,79 @@ const businessTypeHelp = {
   shopping: 'Best for ecommerce stores that list products and accept customer orders.',
   freelancer: 'Best for personal services, portfolios, and direct client enquiries.',
   'small-business': 'Best for local businesses that mainly need services, contact info, and branding.'
+};
+
+const createId = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const createEmptyCustomBlock = type => ({
+  id: createId('block'),
+  type,
+  column: 1,
+  align: 'left',
+  content: '',
+  image: { url: '', alt: '' },
+  video: { url: '', title: '' }
+});
+
+const createEmptyCustomSection = () => ({
+  id: createId('section'),
+  page: 'home',
+  placement: 'bottom',
+  title: '',
+  description: '',
+  layout: 'single',
+  blocks: [createEmptyCustomBlock('heading')]
+});
+
+const normalizeCustomBlock = block => ({
+  id: block?.id || createId('block'),
+  type: block?.type || 'text',
+  column: clamp(block?.column, 1, 2, 1),
+  align: block?.align || 'left',
+  content: block?.content || '',
+  image: {
+    url: block?.image?.url || '',
+    alt: block?.image?.alt || ''
+  },
+  video: {
+    url: block?.video?.url || '',
+    title: block?.video?.title || ''
+  }
+});
+
+const normalizeCustomSection = section => ({
+  id: section?.id || createId('section'),
+  page: section?.page || 'home',
+  placement: section?.placement || 'bottom',
+  title: section?.title || '',
+  description: section?.description || '',
+  layout: section?.layout === 'two-column' ? 'two-column' : 'single',
+  blocks: Array.isArray(section?.blocks) && section.blocks.length > 0
+    ? section.blocks.map(normalizeCustomBlock)
+    : [createEmptyCustomBlock('heading')]
+});
+
+const sanitizeCustomBlock = block => {
+  const normalizedBlock = normalizeCustomBlock(block);
+  const hasContent = normalizedBlock.type === 'image'
+    ? normalizedBlock.image.url
+    : normalizedBlock.type === 'video'
+      ? normalizedBlock.video.url
+      : normalizedBlock.content;
+
+  return hasContent ? normalizedBlock : null;
+};
+
+const sanitizeCustomSection = section => {
+  const normalizedSection = normalizeCustomSection(section);
+  const blocks = normalizedSection.blocks.map(sanitizeCustomBlock).filter(Boolean);
+  const hasSectionContent = normalizedSection.title || normalizedSection.description || blocks.length > 0;
+  if (!hasSectionContent) return null;
+
+  return {
+    ...normalizedSection,
+    blocks: blocks.length > 0 ? blocks : [createEmptyCustomBlock('text')]
+  };
 };
 
 function buildTenantForm(tenant) {
@@ -106,13 +190,20 @@ function buildTenantForm(tenant) {
           }))
         : [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
       images: tenant?.content?.images || [],
-      contactInfo: tenant?.content?.contactInfo || { phone: '', email: '', address: '' }
+      contactInfo: tenant?.content?.contactInfo || { phone: '', email: '', address: '' },
+      customSections: tenant?.content?.customSections?.length
+        ? tenant.content.customSections.map(normalizeCustomSection)
+        : []
     },
     theme: {
       primaryColor: tenant?.theme?.primaryColor || '#2f80ed',
       secondaryColor: tenant?.theme?.secondaryColor || '#f2c94c',
       fontFamily: tenant?.theme?.fontFamily || 'Inter, sans-serif',
-      layout: tenant?.theme?.layout || 'modern'
+      layout: tenant?.theme?.layout || 'modern',
+      siteWidth: clamp(tenant?.theme?.siteWidth, 960, 1680, 1600),
+      heroTitleSize: clamp(tenant?.theme?.heroTitleSize, 48, 96, 72),
+      sectionRadius: clamp(tenant?.theme?.sectionRadius, 16, 48, 36),
+      cardRadius: clamp(tenant?.theme?.cardRadius, 12, 40, 28)
     }
   };
 }
@@ -149,6 +240,73 @@ function LabeledSelect({ label, hint, className = fieldClass, children, ...props
   );
 }
 
+function ResizableThemeCard({ label, hint, value, min, max, unit, onChange, previewStyle, valueLabel }) {
+  const trackRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (!dragging) return undefined;
+
+    const updateValueFromPointer = clientX => {
+      const track = trackRef.current;
+      if (!track) return;
+
+      const rect = track.getBoundingClientRect();
+      const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
+      onChange(Math.round(min + ratio * (max - min)));
+    };
+
+    const handlePointerMove = event => updateValueFromPointer(event.clientX);
+    const handlePointerUp = () => setDragging(false);
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+  }, [dragging, max, min, onChange]);
+
+  const percent = ((value - min) / (max - min)) * 100;
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">{label}</h3>
+          <p className="mt-1 text-sm text-slate-500">{hint}</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">{valueLabel || `${value}${unit}`}</span>
+      </div>
+
+      <div className="mt-4 rounded-[2rem] border border-dashed border-slate-300 bg-slate-50 p-4">
+        <div className="flex min-h-[140px] items-end justify-center rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(47,128,237,0.14),rgba(242,201,76,0.18))] p-4">
+          <div className="relative rounded-[inherit] border border-slate-300/80 bg-white/90 shadow-sm transition-all duration-150" style={previewStyle}>
+            <div className="absolute bottom-2 right-2 h-4 w-4 rounded-full border border-slate-400 bg-white shadow-sm" />
+          </div>
+        </div>
+      </div>
+
+      <div
+        ref={trackRef}
+        className="mt-4 h-4 cursor-ew-resize rounded-full bg-slate-200"
+        onPointerDown={event => {
+          setDragging(true);
+          const rect = trackRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+          onChange(Math.round(min + ratio * (max - min)));
+        }}
+      >
+        <div className="relative h-full rounded-full bg-[linear-gradient(90deg,var(--primary),var(--secondary))]" style={{ width: `${percent}%` }}>
+          <div className="absolute right-0 top-1/2 h-6 w-6 -translate-y-1/2 translate-x-1/2 rounded-full border-4 border-white bg-slate-900 shadow-md" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [form, setForm] = useState(initialForm);
   const [tenantId, setTenantId] = useState(null);
@@ -159,6 +317,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState(JSON.stringify(initialForm));
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const router = useRouter();
 
   const isRestaurant = form.businessType === 'restaurant';
@@ -170,6 +329,7 @@ export default function DashboardPage() {
 
   const formSnapshot = useMemo(() => JSON.stringify(form), [form]);
   const hasUnsavedChanges = formSnapshot !== lastSavedSnapshot;
+  const previewShellWidth = clamp(form.theme.siteWidth, 960, 1680, 1600);
 
   const previewTenant = useMemo(
     () => ({
@@ -186,7 +346,8 @@ export default function DashboardPage() {
         services: form.content.services.filter(service => service.title || service.description || service.image?.url),
         products: form.content.products.filter(
           product => product.title || product.description || product.category || product.image?.url
-        )
+        ),
+        customSections: (form.content.customSections || []).map(sanitizeCustomSection).filter(Boolean)
       }
     }),
     [form, tenantId, websiteCreated]
@@ -257,6 +418,10 @@ export default function DashboardPage() {
         [key]: value
       }
     }));
+  };
+
+  const handleThemeNumberChange = (key, value, min, max, fallback) => {
+    handleFieldChange('theme', key, clamp(value, min, max, fallback));
   };
 
   const handleOwnerChange = (key, value) => {
@@ -599,6 +764,129 @@ export default function DashboardPage() {
     }
   };
 
+  const updateCustomSections = updater => {
+    setForm(prev => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        customSections: updater(prev.content.customSections || [])
+      }
+    }));
+  };
+
+  const addCustomSection = () => {
+    updateCustomSections(sections => [...sections, createEmptyCustomSection()]);
+  };
+
+  const removeCustomSection = sectionId => {
+    updateCustomSections(sections => sections.filter(section => section.id !== sectionId));
+  };
+
+  const moveCustomSection = (sectionId, direction) => {
+    updateCustomSections(sections => {
+      const index = sections.findIndex(section => section.id === sectionId);
+      if (index < 0) return sections;
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= sections.length) return sections;
+      const nextSections = [...sections];
+      const [item] = nextSections.splice(index, 1);
+      nextSections.splice(nextIndex, 0, item);
+      return nextSections;
+    });
+  };
+
+  const updateCustomSection = (sectionId, key, value) => {
+    updateCustomSections(sections =>
+      sections.map(section => (section.id === sectionId ? { ...section, [key]: value } : section))
+    );
+  };
+
+  const addCustomBlock = (sectionId, type) => {
+    updateCustomSections(sections =>
+      sections.map(section =>
+        section.id === sectionId
+          ? {
+              ...section,
+              blocks: [...section.blocks, createEmptyCustomBlock(type)]
+            }
+          : section
+      )
+    );
+  };
+
+  const removeCustomBlock = (sectionId, blockId) => {
+    updateCustomSections(sections =>
+      sections.map(section => {
+        if (section.id !== sectionId) return section;
+        const nextBlocks = section.blocks.filter(block => block.id !== blockId);
+        return {
+          ...section,
+          blocks: nextBlocks.length > 0 ? nextBlocks : [createEmptyCustomBlock('text')]
+        };
+      })
+    );
+  };
+
+  const moveCustomBlock = (sectionId, blockId, direction) => {
+    updateCustomSections(sections =>
+      sections.map(section => {
+        if (section.id !== sectionId) return section;
+        const index = section.blocks.findIndex(block => block.id === blockId);
+        if (index < 0) return section;
+        const nextIndex = index + direction;
+        if (nextIndex < 0 || nextIndex >= section.blocks.length) return section;
+        const nextBlocks = [...section.blocks];
+        const [item] = nextBlocks.splice(index, 1);
+        nextBlocks.splice(nextIndex, 0, item);
+        return { ...section, blocks: nextBlocks };
+      })
+    );
+  };
+
+  const updateCustomBlock = (sectionId, blockId, updater) => {
+    updateCustomSections(sections =>
+      sections.map(section =>
+        section.id === sectionId
+          ? {
+              ...section,
+              blocks: section.blocks.map(block =>
+                block.id === blockId ? { ...block, ...updater(block) } : block
+              )
+            }
+          : section
+      )
+    );
+  };
+
+  const handleCustomBlockImageUpload = async (sectionId, blockId, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!authToken) {
+      setError('Please sign in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading custom section image...');
+      const url = await uploadImage(file);
+      updateCustomBlock(sectionId, blockId, block => ({
+        image: {
+          ...block.image,
+          url,
+          alt: block.image?.alt || file.name
+        }
+      }));
+      setStatus('Custom section image uploaded successfully. Save your website to publish it.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setError(null);
@@ -615,6 +903,13 @@ export default function DashboardPage() {
         ...form.owner,
         ...(form.owner.password ? {} : { password: undefined })
       },
+      theme: {
+        ...form.theme,
+        siteWidth: clamp(form.theme.siteWidth, 960, 1680, 1600),
+        heroTitleSize: clamp(form.theme.heroTitleSize, 48, 96, 72),
+        sectionRadius: clamp(form.theme.sectionRadius, 16, 48, 36),
+        cardRadius: clamp(form.theme.cardRadius, 12, 40, 28)
+      },
       content: {
         ...form.content,
         heroImage: form.content.heroImage?.url ? form.content.heroImage : { url: '', alt: '' },
@@ -626,7 +921,8 @@ export default function DashboardPage() {
         services: form.content.services.filter(service => service.title || service.description || service.image?.url),
         products: form.content.products.filter(
           product => product.title || product.description || product.category || product.image?.url
-        )
+        ),
+        customSections: (form.content.customSections || []).map(sanitizeCustomSection).filter(Boolean)
       }
     };
 
@@ -704,7 +1000,7 @@ export default function DashboardPage() {
 
   return (
     <main className="container py-12">
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+      <div className="grid gap-8">
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -714,9 +1010,14 @@ export default function DashboardPage() {
                 {websiteCreated ? 'Update your website details here.' : 'Complete your website details to publish your site.'}
               </p>
             </div>
-            <button type="button" onClick={handleLogout} className={secondaryButtonClass}>
-              Sign Out
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <button type="button" onClick={() => setShowPreviewModal(true)} className={actionButtonClass}>
+                Preview
+              </button>
+              <button type="button" onClick={handleLogout} className={secondaryButtonClass}>
+                Sign Out
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -1274,6 +1575,305 @@ export default function DashboardPage() {
                   <p className="text-sm text-slate-500">No gallery images uploaded yet.</p>
                 )}
               </div>
+
+              <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Custom Sections</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Add your own sections and choose which page they appear on. You can mix headings, text, images, and videos.
+                    </p>
+                  </div>
+                  <button type="button" onClick={addCustomSection} className={actionButtonClass}>
+                    Add Section
+                  </button>
+                </div>
+
+                {form.content.customSections.length > 0 ? (
+                  <div className="space-y-5">
+                    {form.content.customSections.map((section, sectionIndex) => (
+                      <div key={section.id} className="rounded-3xl border border-slate-300 bg-slate-50 p-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">Section {sectionIndex + 1}</p>
+                            <p className="mt-1 text-sm text-slate-500">Choose the page, placement, layout, and content blocks for this section.</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => moveCustomSection(section.id, -1)} className={secondaryButtonClass}>
+                              Move Up
+                            </button>
+                            <button type="button" onClick={() => moveCustomSection(section.id, 1)} className={secondaryButtonClass}>
+                              Move Down
+                            </button>
+                            <button type="button" onClick={() => removeCustomSection(section.id)} className={dangerButtonClass}>
+                              Remove Section
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                          <LabeledInput
+                            label="Section Title"
+                            name={`customSectionTitle${sectionIndex}`}
+                            autoComplete="off"
+                            value={section.title}
+                            onChange={e => updateCustomSection(section.id, 'title', e.target.value)}
+                            placeholder="Why clients choose us..."
+                          />
+
+                          <LabeledInput
+                            label="Section Description"
+                            name={`customSectionDescription${sectionIndex}`}
+                            autoComplete="off"
+                            value={section.description}
+                            onChange={e => updateCustomSection(section.id, 'description', e.target.value)}
+                            placeholder="Optional short intro for this section..."
+                          />
+
+                          <LabeledSelect
+                            label="Page"
+                            name={`customSectionPage${sectionIndex}`}
+                            value={section.page}
+                            onChange={e => updateCustomSection(section.id, 'page', e.target.value)}
+                          >
+                            <option value="home">Home</option>
+                            <option value="about">About</option>
+                            <option value="offerings">Offerings</option>
+                            <option value="gallery">Gallery</option>
+                            <option value="contact">Contact</option>
+                          </LabeledSelect>
+
+                          <LabeledSelect
+                            label="Placement"
+                            name={`customSectionPlacement${sectionIndex}`}
+                            value={section.placement}
+                            onChange={e => updateCustomSection(section.id, 'placement', e.target.value)}
+                          >
+                            <option value="top">Top of page</option>
+                            <option value="middle">Middle of page</option>
+                            <option value="bottom">Bottom of page</option>
+                          </LabeledSelect>
+
+                          <LabeledSelect
+                            label="Layout"
+                            name={`customSectionLayout${sectionIndex}`}
+                            value={section.layout}
+                            onChange={e => updateCustomSection(section.id, 'layout', e.target.value)}
+                          >
+                            <option value="single">Single column</option>
+                            <option value="two-column">Two columns</option>
+                          </LabeledSelect>
+                        </div>
+
+                        <div className="mt-5 space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <h4 className="text-base font-semibold text-slate-900">Blocks</h4>
+                              <p className="mt-1 text-sm text-slate-500">Add content pieces and move them into the order you want.</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button type="button" onClick={() => addCustomBlock(section.id, 'heading')} className={secondaryButtonClass}>
+                                Add Heading
+                              </button>
+                              <button type="button" onClick={() => addCustomBlock(section.id, 'text')} className={secondaryButtonClass}>
+                                Add Text
+                              </button>
+                              <button type="button" onClick={() => addCustomBlock(section.id, 'image')} className={secondaryButtonClass}>
+                                Add Image
+                              </button>
+                              <button type="button" onClick={() => addCustomBlock(section.id, 'video')} className={secondaryButtonClass}>
+                                Add Video
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            {section.blocks.map((block, blockIndex) => (
+                              <div key={block.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      Block {blockIndex + 1} ({block.type})
+                                    </p>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                      {block.type === 'heading'
+                                        ? 'Use this for large section titles or callouts.'
+                                        : block.type === 'text'
+                                          ? 'Use this for paragraphs, selling points, or extra detail.'
+                                          : block.type === 'image'
+                                            ? 'Use this to place a visual anywhere inside the section.'
+                                            : 'Use a YouTube, Vimeo, or direct MP4 link for video content.'}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button type="button" onClick={() => moveCustomBlock(section.id, block.id, -1)} className={secondaryButtonClass}>
+                                      Up
+                                    </button>
+                                    <button type="button" onClick={() => moveCustomBlock(section.id, block.id, 1)} className={secondaryButtonClass}>
+                                      Down
+                                    </button>
+                                    <button type="button" onClick={() => removeCustomBlock(section.id, block.id)} className={dangerButtonClass}>
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                                  <LabeledSelect
+                                    label="Alignment"
+                                    name={`customBlockAlign${sectionIndex}${blockIndex}`}
+                                    value={block.align}
+                                    onChange={e =>
+                                      updateCustomBlock(section.id, block.id, currentBlock => ({
+                                        align: e.target.value,
+                                        column: currentBlock.column
+                                      }))
+                                    }
+                                  >
+                                    <option value="left">Left</option>
+                                    <option value="center">Center</option>
+                                    <option value="right">Right</option>
+                                  </LabeledSelect>
+
+                                  <LabeledSelect
+                                    label="Column"
+                                    name={`customBlockColumn${sectionIndex}${blockIndex}`}
+                                    value={block.column}
+                                    onChange={e =>
+                                      updateCustomBlock(section.id, block.id, () => ({
+                                        column: clamp(e.target.value, 1, 2, 1)
+                                      }))
+                                    }
+                                  >
+                                    <option value="1">Column 1</option>
+                                    <option value="2">Column 2</option>
+                                  </LabeledSelect>
+                                </div>
+
+                                {block.type === 'image' ? (
+                                  <div className="mt-4 space-y-4">
+                                    <label className="block">
+                                      <span className="text-sm font-medium text-slate-700">Upload Image</span>
+                                      <input
+                                        type="file"
+                                        name={`customBlockImageUpload${sectionIndex}${blockIndex}`}
+                                        accept="image/*"
+                                        onChange={e => handleCustomBlockImageUpload(section.id, block.id, e)}
+                                        className={`${fieldClass} file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700`}
+                                      />
+                                    </label>
+
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                      <LabeledInput
+                                        label="Image URL"
+                                        name={`customBlockImageUrl${sectionIndex}${blockIndex}`}
+                                        type="url"
+                                        inputMode="url"
+                                        autoComplete="off"
+                                        spellCheck={false}
+                                        value={block.image?.url || ''}
+                                        onChange={e =>
+                                          updateCustomBlock(section.id, block.id, currentBlock => ({
+                                            image: {
+                                              ...currentBlock.image,
+                                              url: e.target.value
+                                            }
+                                          }))
+                                        }
+                                        placeholder="https://example.com/custom-section-image.jpg"
+                                      />
+
+                                      <LabeledInput
+                                        label="Image Alt Text"
+                                        name={`customBlockImageAlt${sectionIndex}${blockIndex}`}
+                                        autoComplete="off"
+                                        value={block.image?.alt || ''}
+                                        onChange={e =>
+                                          updateCustomBlock(section.id, block.id, currentBlock => ({
+                                            image: {
+                                              ...currentBlock.image,
+                                              alt: e.target.value
+                                            }
+                                          }))
+                                        }
+                                        placeholder="Describe this image..."
+                                      />
+                                    </div>
+
+                                    {block.image?.url ? (
+                                      <img
+                                        src={block.image.url}
+                                        alt={block.image.alt || `Custom block ${blockIndex + 1}`}
+                                        width="960"
+                                        height="540"
+                                        loading="lazy"
+                                        className="h-52 w-full rounded-2xl object-cover"
+                                      />
+                                    ) : null}
+                                  </div>
+                                ) : block.type === 'video' ? (
+                                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                                    <LabeledInput
+                                      label="Video URL"
+                                      name={`customBlockVideoUrl${sectionIndex}${blockIndex}`}
+                                      type="url"
+                                      inputMode="url"
+                                      autoComplete="off"
+                                      spellCheck={false}
+                                      value={block.video?.url || ''}
+                                      onChange={e =>
+                                        updateCustomBlock(section.id, block.id, currentBlock => ({
+                                          video: {
+                                            ...currentBlock.video,
+                                            url: e.target.value
+                                          }
+                                        }))
+                                      }
+                                      placeholder="https://www.youtube.com/watch?v=..."
+                                    />
+
+                                    <LabeledInput
+                                      label="Video Title"
+                                      name={`customBlockVideoTitle${sectionIndex}${blockIndex}`}
+                                      autoComplete="off"
+                                      value={block.video?.title || ''}
+                                      onChange={e =>
+                                        updateCustomBlock(section.id, block.id, currentBlock => ({
+                                          video: {
+                                            ...currentBlock.video,
+                                            title: e.target.value
+                                          }
+                                        }))
+                                      }
+                                      placeholder="Customer testimonial video..."
+                                    />
+                                  </div>
+                                ) : (
+                                  <LabeledTextarea
+                                    label={block.type === 'heading' ? 'Heading Text' : 'Text Content'}
+                                    name={`customBlockContent${sectionIndex}${blockIndex}`}
+                                    autoComplete="off"
+                                    rows={block.type === 'heading' ? '2' : '5'}
+                                    value={block.content || ''}
+                                    onChange={e =>
+                                      updateCustomBlock(section.id, block.id, () => ({
+                                        content: e.target.value
+                                      }))
+                                    }
+                                    placeholder={block.type === 'heading' ? 'Your new section headline...' : 'Write the text you want visitors to read...'}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No custom sections added yet.</p>
+                )}
+              </div>
             </section>
 
             <section className="space-y-4 rounded-3xl border border-slate-200 bg-slate-50 p-6">
@@ -1317,6 +1917,75 @@ export default function DashboardPage() {
                   <option value="minimal">Minimal</option>
                 </LabeledSelect>
               </div>
+
+              <div className="space-y-4 rounded-3xl border border-slate-200 bg-slate-100 p-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Resize With Mouse</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Drag the controls below to change the published website width, headline size, and roundness.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <ResizableThemeCard
+                    label="Website Width"
+                    hint="Make the whole site feel wider or more compact."
+                    value={clamp(form.theme.siteWidth, 960, 1680, 1600)}
+                    min={960}
+                    max={1680}
+                    unit="px"
+                    onChange={nextValue => handleThemeNumberChange('siteWidth', nextValue, 960, 1680, 1600)}
+                    previewStyle={{
+                      width: `${90 + ((clamp(form.theme.siteWidth, 960, 1680, 1600) - 960) / 720) * 130}px`,
+                      height: '76px'
+                    }}
+                  />
+
+                  <ResizableThemeCard
+                    label="Hero Title Size"
+                    hint="Change how big the main heading appears."
+                    value={clamp(form.theme.heroTitleSize, 48, 96, 72)}
+                    min={48}
+                    max={96}
+                    unit="px"
+                    onChange={nextValue => handleThemeNumberChange('heroTitleSize', nextValue, 48, 96, 72)}
+                    previewStyle={{
+                      width: `${120 + ((clamp(form.theme.heroTitleSize, 48, 96, 72) - 48) / 48) * 70}px`,
+                      height: `${28 + ((clamp(form.theme.heroTitleSize, 48, 96, 72) - 48) / 48) * 48}px`
+                    }}
+                  />
+
+                  <ResizableThemeCard
+                    label="Section Roundness"
+                    hint="Control the outer shape of big sections like nav, hero, and footer."
+                    value={clamp(form.theme.sectionRadius, 16, 48, 36)}
+                    min={16}
+                    max={48}
+                    unit="px"
+                    onChange={nextValue => handleThemeNumberChange('sectionRadius', nextValue, 16, 48, 36)}
+                    previewStyle={{
+                      width: '170px',
+                      height: '96px',
+                      borderRadius: `${clamp(form.theme.sectionRadius, 16, 48, 36)}px`
+                    }}
+                  />
+
+                  <ResizableThemeCard
+                    label="Card Roundness"
+                    hint="Adjust smaller cards and information blocks across the site."
+                    value={clamp(form.theme.cardRadius, 12, 40, 28)}
+                    min={12}
+                    max={40}
+                    unit="px"
+                    onChange={nextValue => handleThemeNumberChange('cardRadius', nextValue, 12, 40, 28)}
+                    previewStyle={{
+                      width: '144px',
+                      height: '88px',
+                      borderRadius: `${clamp(form.theme.cardRadius, 12, 40, 28)}px`
+                    }}
+                  />
+                </div>
+              </div>
             </section>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1340,32 +2009,45 @@ export default function DashboardPage() {
             ) : null}
           </form>
         </div>
+      </div>
 
-        <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-6 py-5">
+      {showPreviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div className="min-w-0">
                 <h2 className="text-balance text-xl font-semibold text-slate-900">Live Preview</h2>
                 <p className="mt-1 text-sm text-slate-600">Preview your site while you create or edit it.</p>
               </div>
-
-              {websiteCreated && form.slug ? (
-                <Link href={`/site/${form.slug}`} className={secondaryButtonClass}>
-                  Open Page
-                </Link>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="rounded-full bg-slate-100 px-3 py-2 text-slate-700 hover:bg-slate-200"
+              >
+                ✕
+              </button>
             </div>
 
-            <div className="max-h-[85vh] overflow-auto bg-slate-100">
-              <div className="min-w-[720px] origin-top-left scale-[0.42] sm:scale-[0.52] lg:scale-[0.6] xl:scale-[0.48] 2xl:scale-[0.58]">
-                <div className="w-[1680px]">
+            <div className="flex-1 overflow-auto bg-slate-100">
+              <div className="min-w-[720px] origin-top-left scale-[0.6] sm:scale-[0.75] md:scale-[0.85]">
+                <div style={{ width: `${previewShellWidth}px` }}>
                   <WebsiteRenderer tenant={previewTenant} />
                 </div>
               </div>
             </div>
+
+            <div className="border-t border-slate-200 px-6 py-4">
+              {websiteCreated && form.slug ? (
+                <Link href={`/site/${form.slug}`} className={actionButtonClass}>
+                  Open Published Website
+                </Link>
+              ) : (
+                <p className="text-sm text-slate-500">Publish your website to view it live.</p>
+              )}
+            </div>
           </div>
-        </aside>
-      </div>
+        </div>
+      )}
     </main>
   );
 }

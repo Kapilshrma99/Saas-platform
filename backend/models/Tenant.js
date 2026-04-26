@@ -49,13 +49,44 @@ const TenantSchema = new mongoose.Schema({
       phone: String,
       email: String,
       address: String
-    }
+    },
+    customSections: [
+      {
+        id: String,
+        page: { type: String, default: 'home' },
+        placement: { type: String, default: 'bottom' },
+        title: String,
+        description: String,
+        layout: { type: String, default: 'single' },
+        blocks: [
+          {
+            id: String,
+            type: String,
+            column: { type: Number, default: 1 },
+            align: { type: String, default: 'left' },
+            content: String,
+            image: {
+              url: String,
+              alt: String
+            },
+            video: {
+              url: String,
+              title: String
+            }
+          }
+        ]
+      }
+    ]
   },
   theme: {
     primaryColor: { type: String, default: '#2f80ed' },
     secondaryColor: { type: String, default: '#f2c94c' },
     fontFamily: { type: String, default: 'Inter, sans-serif' },
-    layout: { type: String, default: 'modern' }
+    layout: { type: String, default: 'modern' },
+    siteWidth: { type: Number, default: 1600 },
+    heroTitleSize: { type: Number, default: 72 },
+    sectionRadius: { type: Number, default: 36 },
+    cardRadius: { type: Number, default: 28 }
   },
   subscription: {
     plan: { type: String, default: 'basic' },
