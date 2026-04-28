@@ -82,7 +82,18 @@ function formatPrice(value) {
   if (value === null || value === undefined || value === '') return null;
   const numericPrice = Number(value);
   if (Number.isNaN(numericPrice)) return null;
-  return `$${numericPrice}`;
+  return `₹${numericPrice}`;
+}
+
+function formatDisplayDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 function getVideoEmbedData(url) {
@@ -139,6 +150,11 @@ export default function WebsiteRenderer({ tenant }) {
 
   const content = tenant?.content || {};
   const customSections = Array.isArray(content.customSections) ? content.customSections : [];
+  const reviews = Array.isArray(content.reviews) ? content.reviews.filter(review => review?.name || review?.role || review?.quote) : [];
+  const blogPosts = Array.isArray(content.blogPosts)
+    ? content.blogPosts.filter(post => post?.title || post?.excerpt || post?.content || post?.author || post?.date || post?.image?.url)
+    : [];
+  const blogsEnabled = Boolean(content.blogsEnabled) && blogPosts.length > 0;
   const businessTypeLabel = getBusinessTypeLabel(tenant?.businessType);
   const preset = getBusinessPreset(tenant?.businessType);
   const themeClasses = {
@@ -212,9 +228,10 @@ export default function WebsiteRenderer({ tenant }) {
     () => [
       { label: 'Category', value: businessTypeLabel },
       { label: offeringLabel, value: String(offerings.length) },
-      { label: 'Gallery', value: String(images.length) }
+      { label: 'Gallery', value: String(images.length) },
+      ...(reviews.length > 0 ? [{ label: 'Reviews', value: String(reviews.length) }] : [])
     ],
-    [businessTypeLabel, offeringLabel, offerings.length, images.length]
+    [businessTypeLabel, offeringLabel, offerings.length, images.length, reviews.length]
   );
 
   const navPages = useMemo(
@@ -223,9 +240,10 @@ export default function WebsiteRenderer({ tenant }) {
       { id: 'about', label: 'About' },
       { id: 'offerings', label: offeringLabel },
       { id: 'gallery', label: 'Gallery' },
+      ...(blogsEnabled ? [{ id: 'blogs', label: 'Blogs' }] : []),
       { id: 'contact', label: 'Contact' }
     ],
-    [offeringLabel]
+    [blogsEnabled, offeringLabel]
   );
 
   const heroNotes = [
@@ -237,6 +255,7 @@ export default function WebsiteRenderer({ tenant }) {
   const quickActions = [
     { label: offeringLabel, page: 'offerings' },
     { label: 'Gallery', page: 'gallery' },
+    ...(blogsEnabled ? [{ label: 'Blogs', page: 'blogs' }] : []),
     { label: 'Contact', page: 'contact' }
   ];
 
@@ -458,6 +477,85 @@ export default function WebsiteRenderer({ tenant }) {
       </SectionShell>
     ) : null;
 
+  const renderReviewsSection = () =>
+    reviews.length > 0 ? (
+      <SectionShell
+        kicker="Social Proof"
+        title="What Customers Say"
+        description="Show real feedback in a way that feels native to the site, not tucked away as an afterthought."
+        aside={
+          <div className={`website-card rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Trust Signal</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">Reviews help new visitors move from interest to confidence more quickly.</p>
+          </div>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {reviews.map((review, index) => (
+            <article key={`${review.name || 'review'}-${index}`} className="website-card rounded-[1.9rem] border border-slate-200/80 bg-white/88 p-6 shadow-sm">
+              <p className="text-lg text-amber-500">{'★'.repeat(Math.max(1, Math.min(Number(review.rating) || 5, 5)))}</p>
+              <p className="mt-4 text-base leading-8 text-slate-600">{review.quote || 'A customer review will appear here soon.'}</p>
+              <div className="mt-6 border-t border-slate-200 pt-4">
+                <p className="font-bold tracking-tight text-slate-950">{review.name || `Customer ${index + 1}`}</p>
+                {review.role ? <p className="mt-1 text-sm text-slate-500">{review.role}</p> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </SectionShell>
+    ) : null;
+
+  const renderBlogsPage = () => (
+    <div className="space-y-8">
+      {renderCustomSections('blogs', 'top')}
+
+      <SectionShell
+        kicker="Insights"
+        title="Blogs"
+        description={`Stories, updates, and practical ideas from ${tenant.name || 'this business'}.`}
+        aside={
+          <div className={`website-card rounded-[1.75rem] border border-slate-200/80 p-5 shadow-sm ${preset.mutedPanelClass}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-slate-400">Editorial</p>
+            <p className="mt-3 text-sm leading-7 text-slate-600">This page gives the business room to teach, update, and build authority over time.</p>
+          </div>
+        }
+      >
+        {blogPosts.length > 0 ? (
+          <div className="space-y-5">
+            {blogPosts.map((post, index) => (
+              <article key={post.id || `${post.title || 'blog'}-${index}`} className={`website-card overflow-hidden rounded-[2rem] border shadow-sm ${themeClasses.featureCardClass}`}>
+                <div className={`grid gap-0 ${post.image?.url ? 'lg:grid-cols-[18rem_minmax(0,1fr)]' : 'grid-cols-1'}`}>
+                  {post.image?.url ? (
+                    <img
+                      src={post.image.url}
+                      alt={post.image.alt || post.title || `Blog post ${index + 1}`}
+                      className="h-full min-h-[16rem] w-full object-cover"
+                    />
+                  ) : null}
+                  <div className="p-6 sm:p-8">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                      {post.author ? <span>{post.author}</span> : null}
+                      {post.author && post.date ? <span className="h-1 w-1 rounded-full bg-slate-300" /> : null}
+                      {post.date ? <span>{formatDisplayDate(post.date)}</span> : null}
+                    </div>
+                    <h3 className="mt-3 text-3xl font-black tracking-[-0.04em] text-slate-950">{post.title || `Blog Post ${index + 1}`}</h3>
+                    {post.excerpt ? <p className="mt-4 text-lg leading-8 text-slate-600">{post.excerpt}</p> : null}
+                    {post.content ? <p className="mt-5 whitespace-pre-wrap text-base leading-8 text-slate-600">{post.content}</p> : null}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="No blog posts published yet." />
+        )}
+      </SectionShell>
+
+      {renderCustomSections('blogs', 'middle')}
+      {renderCustomSections('blogs', 'bottom')}
+    </div>
+  );
+
   const renderHomePage = () => (
     <div className="space-y-8">
       {renderCustomSections('home', 'top')}
@@ -636,6 +734,7 @@ export default function WebsiteRenderer({ tenant }) {
       {renderCustomSections('home', 'middle')}
 
       {renderFeaturedOfferings()}
+      {renderReviewsSection()}
       {renderVisualSpotlight()}
 
       {showOrderForm || showBookingForm ? (
@@ -919,6 +1018,7 @@ export default function WebsiteRenderer({ tenant }) {
     about: renderAboutPage(),
     offerings: renderOfferingsPage(),
     gallery: renderGalleryPage(),
+    ...(blogsEnabled ? { blogs: renderBlogsPage() } : {}),
     contact: renderContactPage()
   };
 

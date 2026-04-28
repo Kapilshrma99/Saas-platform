@@ -44,6 +44,29 @@ const TenantSchema = new mongoose.Schema({
         }
       }
     ],
+    reviews: [
+      {
+        name: String,
+        role: String,
+        quote: String,
+        rating: { type: Number, default: 5 }
+      }
+    ],
+    blogsEnabled: { type: Boolean, default: false },
+    blogPosts: [
+      {
+        id: String,
+        title: String,
+        excerpt: String,
+        content: String,
+        date: String,
+        author: String,
+        image: {
+          url: String,
+          alt: String
+        }
+      }
+    ],
     images: [{ url: String, alt: String }],
     contactInfo: {
       phone: String,

@@ -31,6 +31,9 @@ const initialForm = {
     },
     services: [{ title: '', description: '', image: { url: '', alt: '' } }],
     products: [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
+    reviews: [{ name: '', role: '', quote: '', rating: 5 }],
+    blogsEnabled: false,
+    blogPosts: [{ id: '', title: '', excerpt: '', content: '', date: '', author: '', image: { url: '', alt: '' } }],
     images: [],
     contactInfo: { phone: '', email: '', address: '' },
     customSections: []
@@ -72,6 +75,23 @@ const businessTypeHelp = {
 };
 
 const createId = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const createEmptyReview = () => ({
+  name: '',
+  role: '',
+  quote: '',
+  rating: 5
+});
+
+const createEmptyBlogPost = () => ({
+  id: createId('blog'),
+  title: '',
+  excerpt: '',
+  content: '',
+  date: '',
+  author: '',
+  image: { url: '', alt: '' }
+});
 
 const createEmptyCustomBlock = type => ({
   id: createId('block'),
@@ -189,6 +209,29 @@ function buildTenantForm(tenant) {
             }
           }))
         : [{ title: '', description: '', price: 0, category: '', image: { url: '', alt: '' } }],
+      reviews: tenant?.content?.reviews?.length
+        ? tenant.content.reviews.map(review => ({
+            name: review.name || '',
+            role: review.role || '',
+            quote: review.quote || '',
+            rating: clamp(review.rating, 1, 5, 5)
+          }))
+        : [createEmptyReview()],
+      blogsEnabled: Boolean(tenant?.content?.blogsEnabled),
+      blogPosts: tenant?.content?.blogPosts?.length
+        ? tenant.content.blogPosts.map(post => ({
+            id: post.id || createId('blog'),
+            title: post.title || '',
+            excerpt: post.excerpt || '',
+            content: post.content || '',
+            date: post.date || '',
+            author: post.author || '',
+            image: {
+              url: post.image?.url || '',
+              alt: post.image?.alt || ''
+            }
+          }))
+        : [createEmptyBlogPost()],
       images: tenant?.content?.images || [],
       contactInfo: tenant?.content?.contactInfo || { phone: '', email: '', address: '' },
       customSections: tenant?.content?.customSections?.length
@@ -347,6 +390,19 @@ export default function DashboardPage() {
         products: form.content.products.filter(
           product => product.title || product.description || product.category || product.image?.url
         ),
+        reviews: (form.content.reviews || [])
+          .map(review => ({
+            ...review,
+            rating: clamp(review.rating, 1, 5, 5)
+          }))
+          .filter(review => review.name || review.role || review.quote),
+        blogsEnabled: Boolean(form.content.blogsEnabled),
+        blogPosts: (form.content.blogPosts || [])
+          .map(post => ({
+            ...post,
+            id: post.id || createId('blog')
+          }))
+          .filter(post => post.title || post.excerpt || post.content || post.author || post.date || post.image?.url),
         customSections: (form.content.customSections || []).map(sanitizeCustomSection).filter(Boolean)
       }
     }),
@@ -575,6 +631,49 @@ export default function DashboardPage() {
     }));
   };
 
+  const handleReviewChange = (index, key, value) => {
+    const reviews = [...(form.content.reviews || [])];
+    reviews[index] = { ...reviews[index], [key]: key === 'rating' ? clamp(value, 1, 5, 5) : value };
+    handleContentChange('reviews', reviews);
+  };
+
+  const addReview = () => {
+    handleContentChange('reviews', [...(form.content.reviews || []), createEmptyReview()]);
+  };
+
+  const removeReview = index => {
+    const reviews = (form.content.reviews || []).filter((_, reviewIndex) => reviewIndex !== index);
+    handleContentChange('reviews', reviews.length ? reviews : [createEmptyReview()]);
+  };
+
+  const handleBlogPostChange = (index, key, value) => {
+    const blogPosts = [...(form.content.blogPosts || [])];
+    blogPosts[index] = { ...blogPosts[index], [key]: value };
+    handleContentChange('blogPosts', blogPosts);
+  };
+
+  const handleBlogPostImageChange = (index, key, value) => {
+    const blogPosts = [...(form.content.blogPosts || [])];
+    blogPosts[index] = {
+      ...blogPosts[index],
+      image: {
+        url: blogPosts[index]?.image?.url || '',
+        alt: blogPosts[index]?.image?.alt || '',
+        [key]: value
+      }
+    };
+    handleContentChange('blogPosts', blogPosts);
+  };
+
+  const addBlogPost = () => {
+    handleContentChange('blogPosts', [...(form.content.blogPosts || []), createEmptyBlogPost()]);
+  };
+
+  const removeBlogPost = index => {
+    const blogPosts = (form.content.blogPosts || []).filter((_, blogIndex) => blogIndex !== index);
+    handleContentChange('blogPosts', blogPosts.length ? blogPosts : [createEmptyBlogPost()]);
+  };
+
   const uploadImage = async file => {
     const payload = new FormData();
     payload.append('file', file);
@@ -764,6 +863,46 @@ export default function DashboardPage() {
     }
   };
 
+  const handleBlogImageUpload = async (index, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!authToken) {
+      setError('Please sign in before uploading images.');
+      return;
+    }
+
+    try {
+      setError(null);
+      setStatus('Uploading blog image...');
+      const url = await uploadImage(file);
+      setForm(prev => {
+        const blogPosts = [...(prev.content.blogPosts || [])];
+        blogPosts[index] = {
+          ...blogPosts[index],
+          image: {
+            url,
+            alt: blogPosts[index]?.image?.alt || file.name
+          }
+        };
+
+        return {
+          ...prev,
+          content: {
+            ...prev.content,
+            blogPosts
+          }
+        };
+      });
+      setStatus('Blog image uploaded successfully. Save your website to publish it.');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+      setStatus(null);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const updateCustomSections = updater => {
     setForm(prev => ({
       ...prev,
@@ -922,6 +1061,19 @@ export default function DashboardPage() {
         products: form.content.products.filter(
           product => product.title || product.description || product.category || product.image?.url
         ),
+        reviews: (form.content.reviews || [])
+          .map(review => ({
+            ...review,
+            rating: clamp(review.rating, 1, 5, 5)
+          }))
+          .filter(review => review.name || review.role || review.quote),
+        blogsEnabled: Boolean(form.content.blogsEnabled),
+        blogPosts: (form.content.blogPosts || [])
+          .map(post => ({
+            ...post,
+            id: post.id || createId('blog')
+          }))
+          .filter(post => post.title || post.excerpt || post.content || post.author || post.date || post.image?.url),
         customSections: (form.content.customSections || []).map(sanitizeCustomSection).filter(Boolean)
       }
     };
@@ -1500,6 +1652,206 @@ export default function DashboardPage() {
               )}
 
               <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Reviews</h3>
+                    <p className="mt-1 text-sm text-slate-500">Show customer feedback as a dedicated reviews section on the website.</p>
+                  </div>
+                  <button type="button" onClick={addReview} className={actionButtonClass}>
+                    Add Review
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {(form.content.reviews || []).map((review, index) => (
+                    <div key={`review-${index}`} className="rounded-3xl border border-slate-300 bg-slate-50 p-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <LabeledInput
+                          label={`Reviewer ${index + 1} Name`}
+                          name={`reviewName${index}`}
+                          autoComplete="off"
+                          value={review.name}
+                          onChange={e => handleReviewChange(index, 'name', e.target.value)}
+                          placeholder="Aarav Mehta..."
+                        />
+
+                        <LabeledInput
+                          label="Role or Company"
+                          name={`reviewRole${index}`}
+                          autoComplete="off"
+                          value={review.role}
+                          onChange={e => handleReviewChange(index, 'role', e.target.value)}
+                          placeholder="Patient, Client, Founder..."
+                        />
+
+                        <LabeledTextarea
+                          label="Review Quote"
+                          name={`reviewQuote${index}`}
+                          autoComplete="off"
+                          rows="4"
+                          className={`${textAreaClass} md:col-span-2`}
+                          value={review.quote}
+                          onChange={e => handleReviewChange(index, 'quote', e.target.value)}
+                          placeholder="Share the testimonial you want visitors to read..."
+                        />
+
+                        <LabeledInput
+                          label="Rating"
+                          name={`reviewRating${index}`}
+                          type="number"
+                          min="1"
+                          max="5"
+                          step="1"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          value={review.rating}
+                          onChange={e => handleReviewChange(index, 'rating', e.target.value)}
+                          placeholder="5"
+                        />
+                      </div>
+
+                      <button type="button" onClick={() => removeReview(index)} className={`mt-3 ${dangerButtonClass}`}>
+                        Remove Review
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">Blogs Page</h3>
+                    <p className="mt-1 text-sm text-slate-500">Turn this on only when you want a blogs page in the site navigation.</p>
+                  </div>
+                  <label className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.content.blogsEnabled)}
+                      onChange={e => handleContentChange('blogsEnabled', e.target.checked)}
+                    />
+                    Enable Blogs Page
+                  </label>
+                </div>
+
+                {Boolean(form.content.blogsEnabled) ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm text-slate-500">Add posts that will appear on the published blogs page.</p>
+                      <button type="button" onClick={addBlogPost} className={actionButtonClass}>
+                        Add Blog Post
+                      </button>
+                    </div>
+
+                    {(form.content.blogPosts || []).map((post, index) => (
+                      <div key={post.id || `blog-${index}`} className="rounded-3xl border border-slate-300 bg-slate-50 p-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <LabeledInput
+                            label="Post Title"
+                            name={`blogTitle${index}`}
+                            autoComplete="off"
+                            value={post.title}
+                            onChange={e => handleBlogPostChange(index, 'title', e.target.value)}
+                            placeholder="5 ways to improve your first visit..."
+                          />
+
+                          <LabeledInput
+                            label="Author"
+                            name={`blogAuthor${index}`}
+                            autoComplete="off"
+                            value={post.author}
+                            onChange={e => handleBlogPostChange(index, 'author', e.target.value)}
+                            placeholder="Team SmileCare..."
+                          />
+
+                          <LabeledInput
+                            label="Publish Date"
+                            name={`blogDate${index}`}
+                            type="date"
+                            value={post.date || ''}
+                            onChange={e => handleBlogPostChange(index, 'date', e.target.value)}
+                          />
+
+                          <LabeledInput
+                            label="Short Excerpt"
+                            name={`blogExcerpt${index}`}
+                            autoComplete="off"
+                            value={post.excerpt}
+                            onChange={e => handleBlogPostChange(index, 'excerpt', e.target.value)}
+                            placeholder="A short summary shown in the blog card..."
+                          />
+
+                          <LabeledTextarea
+                            label="Blog Content"
+                            name={`blogContent${index}`}
+                            autoComplete="off"
+                            rows="6"
+                            className={`${textAreaClass} md:col-span-2`}
+                            value={post.content}
+                            onChange={e => handleBlogPostChange(index, 'content', e.target.value)}
+                            placeholder="Write the full blog post here..."
+                          />
+                        </div>
+
+                        <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+                          <label className="block">
+                            <span className="text-sm font-medium text-slate-700">Upload Blog Image</span>
+                            <input
+                              type="file"
+                              name={`blogImageUpload${index}`}
+                              accept="image/*"
+                              onChange={e => handleBlogImageUpload(index, e)}
+                              className={`${fieldClass} file:mr-4 file:rounded-full file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700`}
+                            />
+                          </label>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <LabeledInput
+                              label="Blog Image URL"
+                              name={`blogImageUrl${index}`}
+                              type="url"
+                              inputMode="url"
+                              autoComplete="off"
+                              spellCheck={false}
+                              value={post.image?.url || ''}
+                              onChange={e => handleBlogPostImageChange(index, 'url', e.target.value)}
+                              placeholder="https://example.com/blog-image.jpg..."
+                            />
+
+                            <LabeledInput
+                              label="Blog Image Alt Text"
+                              name={`blogImageAlt${index}`}
+                              autoComplete="off"
+                              value={post.image?.alt || ''}
+                              onChange={e => handleBlogPostImageChange(index, 'alt', e.target.value)}
+                              placeholder="Describe the blog cover image..."
+                            />
+                          </div>
+
+                          {post.image?.url ? (
+                            <img
+                              src={post.image.url}
+                              alt={post.image.alt || `Blog post ${index + 1}`}
+                              width="720"
+                              height="352"
+                              loading="lazy"
+                              className="h-44 w-full rounded-2xl object-cover"
+                            />
+                          ) : null}
+                        </div>
+
+                        <button type="button" onClick={() => removeBlogPost(index)} className={`mt-3 ${dangerButtonClass}`}>
+                          Remove Blog Post
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">Blogs are disabled for this site right now.</p>
+                )}
+              </div>
+
+              <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4">
                 <div>
                   <h3 className="text-lg font-semibold">Contact Information</h3>
                   <p className="mt-1 text-sm text-slate-500">This information appears on your site so customers can reach you quickly.</p>
@@ -1640,6 +1992,7 @@ export default function DashboardPage() {
                             <option value="about">About</option>
                             <option value="offerings">Offerings</option>
                             <option value="gallery">Gallery</option>
+                            <option value="blogs">Blogs</option>
                             <option value="contact">Contact</option>
                           </LabeledSelect>
 
