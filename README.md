@@ -53,6 +53,8 @@ Use unique entries for each tenant subdomain for local testing.
   - `RAZORPAY_KEY_SECRET`
 - Use Razorpay test credentials during development.
 
+it is not having razorpay subscription.
+
 ## Notes
 - The backend caches tenant lookups in Redis with keys like `tenant:{slug}`.
 - The MinIO upload bucket is `uploads` and stores files under `/uploads/{slug}/...`.
