@@ -1,36 +1,36 @@
 const defaultConfig = {
-  badge: 'Brand Website',
+  badge: 'Business Presence',
   offeringLabel: 'Services',
-  homeTitle: 'A stronger digital front door for the business.',
+  homeTitle: 'A more credible digital front door for the business.',
   homeDescription:
-    'Present your services, visuals, and contact details with a cleaner and more premium customer experience.',
-  sectionTone: 'Balanced, premium, and easy for visitors to navigate.',
-  audienceTitle: 'What visitors need quickly',
-  audiencePoints: ['A clear offer', 'Reasons to trust the business', 'A direct next step'],
+    'Present services, proof, visuals, and next steps with a sharper brand experience that feels current from the first screen.',
+  sectionTone: 'Balanced, editorial, and built to make the business feel trustworthy without feeling generic.',
+  audienceTitle: 'What visitors want fast',
+  audiencePoints: ['A clear offer', 'Proof that feels reassuring', 'An easy path to enquire'],
   ctaLabel: 'Get In Touch',
-  spotlightTitle: 'A polished customer-facing experience designed to build momentum.',
-  pageBackgroundClass: 'bg-[linear-gradient(180deg,#f7fbff_0%,#f4efe6_38%,#f7f9fc_100%)]',
+  spotlightTitle: 'A business site that feels polished, current, and ready to convert interest into action.',
+  pageBackgroundClass: 'bg-[linear-gradient(180deg,#f8fbff_0%,#f6f0e8_40%,#f8fafc_100%)]',
   ambientBackgroundClass:
-    'bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(250,204,21,0.12),transparent_26%),radial-gradient(circle_at_70%_50%,rgba(16,185,129,0.10),transparent_24%)]',
+    'bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(245,158,11,0.12),transparent_26%),radial-gradient(circle_at_72%_52%,rgba(34,197,94,0.10),transparent_24%)]',
   surfaceClass:
-    'bg-[linear-gradient(135deg,rgba(255,255,255,0.97),rgba(247,249,252,0.78)),radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_28%)]',
-  navClass: 'border-white/70 bg-white/76',
-  brandMarkClass: 'bg-slate-950 text-white shadow-[0_16px_35px_rgba(15,23,42,0.16)]',
-  heroGlassClass: 'border-white/80 bg-white/85 text-slate-600 shadow-sm',
-  heroNoteClass: 'border-white/80 bg-white/72 text-slate-600 shadow-sm',
-  audienceCardClass: 'border-white/70 bg-white/65 text-slate-700 shadow-sm',
+    'bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(246,248,251,0.78)),radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(34,197,94,0.12),transparent_28%)]',
+  navClass: 'border-white/75 bg-white/78',
+  brandMarkClass: 'bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]',
+  heroGlassClass: 'border-white/85 bg-white/86 text-slate-700 shadow-[0_14px_30px_rgba(15,23,42,0.08)]',
+  heroNoteClass: 'border-white/80 bg-white/74 text-slate-700 shadow-[0_12px_28px_rgba(15,23,42,0.07)]',
+  audienceCardClass: 'border-white/75 bg-white/68 text-slate-700 shadow-sm',
   primaryButtonClass:
-    'bg-slate-950 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 hover:bg-slate-900',
-  secondaryButtonClass: 'border-slate-200 bg-white/88 text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white',
-  accentPanelClass: 'bg-slate-950 text-white',
-  mutedPanelClass: 'bg-slate-50/85',
+    'bg-[linear-gradient(135deg,#0f172a,#334155)] text-white shadow-[0_20px_42px_rgba(15,23,42,0.22)] hover:-translate-y-0.5 hover:brightness-110',
+  secondaryButtonClass: 'border-slate-200 bg-white/90 text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white',
+  accentPanelClass: 'bg-[linear-gradient(145deg,#0f172a,#1f2937)] text-white',
+  mutedPanelClass: 'bg-slate-50/88',
   featureCardClass:
-    'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(15,23,42,0.10)]',
-  sectionCardClass: 'border-white/70 bg-white/76',
-  galleryFrameClass: 'border-slate-200/80 bg-slate-100',
-  footerClass: 'border-white/70 bg-white/80',
-  footerButtonClass: 'bg-slate-950 text-white hover:bg-slate-900',
-  contactBannerSecondaryClass: 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+    'border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.93))] hover:-translate-y-1 hover:shadow-[0_28px_58px_rgba(15,23,42,0.10)]',
+  sectionCardClass: 'border-white/75 bg-white/78',
+  galleryFrameClass: 'border-slate-200/80 bg-slate-100/90',
+  footerClass: 'border-white/75 bg-white/82',
+  footerButtonClass: 'bg-[linear-gradient(135deg,#0f172a,#334155)] text-white hover:brightness-110',
+  contactBannerSecondaryClass: 'border-white/20 bg-white/12 text-white hover:bg-white/18'
 };
 
 export default defaultConfig;

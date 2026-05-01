@@ -14,8 +14,12 @@ export const businessPresets = {
   default: defaultConfig
 };
 
+function filterItems(items, predicate) {
+  return Array.isArray(items) ? items.filter(predicate) : [];
+}
+
 export function getBusinessTypeLabel(businessType) {
-  return businessType ? businessType.replace('-', ' ') : 'business';
+  return businessType ? businessType.split('-').join(' ') : 'business';
 }
 
 export function getBusinessPreset(businessType) {
@@ -24,10 +28,10 @@ export function getBusinessPreset(businessType) {
 
 export function getOfferings(content, businessType) {
   if (businessType === 'shopping' || businessType === 'restaurant') {
-    return content?.products?.filter(product => product.title || product.description || product.category || product.image?.url) || [];
+    return filterItems(content?.products, product => product?.title || product?.description || product?.category || product?.image?.url);
   }
 
-  return content?.services?.filter(service => service.title || service.description || service.image?.url) || [];
+  return filterItems(content?.services, service => service?.title || service?.description || service?.image?.url);
 }
 
 export function shouldShowOrderForm(businessType) {
