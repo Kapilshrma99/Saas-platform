@@ -1152,23 +1152,26 @@ export default function DashboardPage() {
 
   return (
     <main className="container py-12">
-      <div className="grid gap-8">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-balance text-3xl font-bold">{websiteCreated ? 'Edit Website' : 'Create Website'}</h1>
-              <p className="mt-2 break-words text-slate-600">
-                You are logged in as <span className="font-medium text-slate-900">{form.owner.email}</span>.{' '}
-                {websiteCreated ? 'Update your website details here.' : 'Complete your website details to publish your site.'}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-              <button type="button" onClick={() => setShowPreviewModal(true)} className={actionButtonClass}>
-                Preview
-              </button>
-              <button type="button" onClick={handleLogout} className={secondaryButtonClass}>
-                Sign Out
-              </button>
+          <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-700 to-cyan-600 p-8 text-white shadow-sm shadow-cyan-500/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-200">Website builder</p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{websiteCreated ? 'Edit Your Website' : 'Create Your Website'}</h1>
+                <p className="mt-3 max-w-2xl text-sm/relaxed text-cyan-100">
+                  Build your business landing page faster with clear sections, live preview, and polished styling.
+                  Start with the essentials and update content as you go.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:items-end">
+                <button type="button" onClick={() => setShowPreviewModal(true)} className={actionButtonClass}>
+                  Preview
+                </button>
+                <button type="button" onClick={handleLogout} className={secondaryButtonClass}>
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2362,6 +2365,69 @@ export default function DashboardPage() {
             ) : null}
           </form>
         </div>
+
+        <aside className="space-y-6 xl:sticky xl:top-24">
+          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-slate-100 to-white p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Website at a glance</p>
+            <h2 className="mt-3 text-2xl font-semibold text-slate-900">{form.name || 'Your site preview'}</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {form.slug ? `Accessible at /site/${form.slug}` : 'Add a slug and save to publish your website.'}
+            </p>
+
+            <div className="mt-6 grid gap-3">
+              <div className="rounded-3xl bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Status</p>
+                <p className="mt-2 text-sm font-semibold text-slate-900">{websiteCreated ? 'Published' : 'Draft'}</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-3xl bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Type</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900 capitalize">{form.businessType.replace('-', ' ')}</p>
+                </div>
+                <div className="rounded-3xl bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Theme</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900 capitalize">{form.theme.layout}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              <button type="button" onClick={() => setShowPreviewModal(true)} className={actionButtonClass}>
+                Live Preview
+              </button>
+              {websiteCreated && form.slug ? (
+                <Link href={`/site/${form.slug}`} className={secondaryButtonClass}>
+                  Open Published Website
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-indigo-600">Quick start</p>
+            <h3 className="mt-3 text-xl font-semibold text-slate-900">Build faster</h3>
+
+            <ul className="mt-5 space-y-3 text-sm text-slate-600">
+              <li className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <strong className="block text-slate-900">1. Enter your basics</strong>
+                Add your business name, slug, and select the type of service.
+              </li>
+              <li className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <strong className="block text-slate-900">2. Add hero content</strong>
+                Upload a hero image and write a short homepage message.
+              </li>
+              <li className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <strong className="block text-slate-900">3. Customize sections</strong>
+                Add services, products, reviews, and gallery images.
+              </li>
+              <li className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <strong className="block text-slate-900">4. Pick a style</strong>
+                Use the Theme section to refine colors, fonts, and layout.
+              </li>
+            </ul>
+          </div>
+        </aside>
       </div>
 
       {showPreviewModal && (
