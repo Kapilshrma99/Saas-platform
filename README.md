@@ -53,7 +53,7 @@ Use unique entries for each tenant subdomain for local testing.
   - `RAZORPAY_KEY_SECRET`
 - Use Razorpay test credentials during development.
 
-it is not having razorpay subscription.
+it is not having razorpay subscription. we have to use real razorpay.
 
 ## Notes
 - The backend caches tenant lookups in Redis with keys like `tenant:{slug}`.
