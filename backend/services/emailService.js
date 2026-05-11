@@ -102,6 +102,49 @@ const sendBookingNotification = async ({ tenant, booking }) => {
   return { sent: true };
 };
 
+const sendPasswordResetEmail = async ({ recipient, businessName, resetUrl }) => {
+  const config = getMailConfig();
+  const mailer = getTransporter();
+
+  if (!recipient || !config || !mailer) {
+    return { sent: false, reason: 'Mail service not configured' };
+  }
+
+  await mailer.sendMail({
+    from: config.from,
+    to: recipient,
+    subject: `Reset your password for ${businessName}`,
+    text: [
+      `We received a request to reset the password for ${businessName}.`,
+      '',
+      'Open the link below to choose a new password:',
+      resetUrl,
+      '',
+      'This link expires in 1 hour.',
+      'If you did not request this, you can ignore this email.'
+    ].join('\n'),
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #0f172a;">
+        <h2 style="margin-bottom: 16px;">Reset your password</h2>
+        <p>We received a request to reset the password for <strong>${escapeHtml(businessName)}</strong>.</p>
+        <p>
+          <a
+            href="${escapeHtml(resetUrl)}"
+            style="display:inline-block;padding:12px 20px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;"
+          >
+            Choose a new password
+          </a>
+        </p>
+        <p style="word-break: break-all;">If the button does not work, open this link:<br />${escapeHtml(resetUrl)}</p>
+        <p>This link expires in 1 hour.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `
+  });
+
+  return { sent: true };
+};
+
 const formatCurrency = value => {
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) return String(value);
@@ -177,4 +220,4 @@ const sendOrderNotification = async ({ tenant, order }) => {
   return { sent: true };
 };
 
-module.exports = { sendBookingNotification, sendOrderNotification };
+module.exports = { sendBookingNotification, sendOrderNotification, sendPasswordResetEmail };

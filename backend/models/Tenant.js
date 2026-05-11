@@ -7,7 +7,9 @@ const TenantSchema = new mongoose.Schema({
   businessType: { type: String, trim: true },
   owner: {
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
+    passwordResetToken: String,
+    passwordResetExpires: Date
   },
   websiteCreated: { type: Boolean, default: false },
   content: {
