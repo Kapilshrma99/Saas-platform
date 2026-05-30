@@ -1,13 +1,16 @@
 const Tenant = require('../models/Tenant');
 const { getRedisClient } = require('../config/redis');
 
+const isIpAddress = hostname => /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname === '::1' || hostname === '[::1]';
+
 const tenantMiddleware = async (req, res, next) => {
   try {
     const host = req.headers.host || '';
-    const hostParts = host.split(':')[0].split('.');
+    const hostname = host.split(':')[0];
+    const hostParts = hostname.split('.');
     let subdomain = null;
 
-    if (hostParts.length > 2) {
+    if (!isIpAddress(hostname) && hostParts.length > 2) {
       subdomain = hostParts[0];
     }
 

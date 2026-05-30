@@ -2,7 +2,15 @@ import { NextResponse } from 'next/server';
 
 const PUBLIC_FILE = /\.(.*)$/;
 
+function isIpAddress(hostname) {
+  return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname === '::1' || hostname === '[::1]';
+}
+
 function getSubdomain(hostname) {
+  if (!hostname || isIpAddress(hostname)) {
+    return null;
+  }
+
   const parts = hostname.split('.');
 
   if (hostname.endsWith('.localhost') && parts.length === 2) {
